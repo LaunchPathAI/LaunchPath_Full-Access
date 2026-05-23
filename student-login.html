@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>LaunchPath AI – Sign In</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg-main: #020617;
+      --bg-card: #0b1220;
+      --accent: #38bdf8;
+      --accent-purple: #a855f7;
+      --text-main: #f9fafb;
+      --text-muted: #9ca3af;
+      --text-sub: #cbd5f5;
+      --border: #1f2937;
+      --font: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: radial-gradient(circle at top left, #1d2342 0, #020617 55%, #000 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    .lp-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px 24px 0;
+    }
+    .brand-lockup { display: flex; align-items: center; gap: 12px; }
+    .brand-mark {height:48px;width:auto;aspect-ratio:650/815;background:url("data:image/png;base64,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") left center/contain no-repeat;flex-shrink:0;margin-left:-4px;}
+    .brand-text-main {
+      font-size: 1.05rem; letter-spacing: .14em;
+      text-transform: uppercase; font-weight: 700;
+    }
+    .brand-text-sub { font-size: .82rem; color: var(--text-sub); margin-top: 2px; }
+    .lp-nav { display: flex; align-items: center; gap: 10px; }
+    .lp-nav-link {
+      padding: 9px 16px; border-radius: 999px;
+      border: 1px solid rgba(56,189,248,.45);
+      background: rgba(15,23,42,.55);
+      color: rgba(224,242,254,.86);
+      text-decoration: none; font-size: .86rem;
+      white-space: nowrap; transition: border-color .15s, background .15s;
+    }
+    .lp-nav-link:hover { border-color: rgba(56,189,248,.75); background: rgba(15,23,42,.75); }
+    @media (max-width: 640px) {
+      .lp-header { flex-direction: column; align-items: flex-start; padding: 20px 18px 0; }
+      .lp-nav { width: 100%; }
+    }
+
+    /* ── PAGE LAYOUT ── */
+    .page {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - 100px);
+      padding: 32px 20px 60px;
+    }
+
+    /* ── LOGIN CARD ── */
+    .login-wrap { width: 100%; max-width: 440px; }
+    .login-eyebrow {
+      font-size: .75rem; text-transform: uppercase;
+      letter-spacing: .18em; color: var(--text-muted);
+      margin-bottom: 10px; text-align: center;
+    }
+    .login-title {
+      font-size: clamp(1.7rem, 3vw + 1rem, 2.2rem);
+      font-weight: 700; line-height: 1.1;
+      text-align: center; margin-bottom: 6px;
+    }
+    .login-title .blue { color: #60a5fa; }
+    .login-sub {
+      font-size: .9rem; color: var(--text-muted);
+      text-align: center; margin-bottom: 28px; line-height: 1.5;
+    }
+    .login-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 28px 28px 24px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.75);
+    }
+
+    /* ── FORM ELEMENTS ── */
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block; font-size: .8rem;
+      color: var(--text-sub); margin-bottom: 7px;
+      font-weight: 500; letter-spacing: .02em;
+    }
+    .field input {
+      width: 100%; padding: 13px 14px;
+      border-radius: 14px; border: 1px solid var(--border);
+      background: #020617; color: var(--text-main);
+      font-size: .95rem; font-family: var(--font);
+      outline: none; transition: border-color .15s, box-shadow .15s;
+    }
+    .field input:focus {
+      border-color: rgba(56,189,248,.8);
+      box-shadow: 0 0 0 3px rgba(56,189,248,.1);
+    }
+    .field input::placeholder { color: #4b5563; }
+
+    .forgot {
+      display: block; text-align: right;
+      font-size: .78rem; color: var(--text-muted);
+      text-decoration: none; margin-top: -8px;
+      margin-bottom: 20px;
+    }
+    .forgot:hover { color: var(--accent); }
+
+    /* ── BUTTONS ── */
+    .btn-primary {
+      display: block; width: 100%;
+      padding: 13px 20px; border-radius: 999px;
+      background: linear-gradient(135deg, #22d3ee, #38bdf8);
+      color: #04131f; font-weight: 700; font-size: .95rem;
+      border: none; cursor: pointer; font-family: var(--font);
+      letter-spacing: .02em;
+      box-shadow: 0 8px 28px rgba(34,211,238,.2);
+      transition: filter .15s, transform .1s;
+    }
+    .btn-primary:hover { filter: brightness(1.07); transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+
+    /* ── DIVIDER ── */
+    .divider {
+      display: flex; align-items: center;
+      gap: 12px; margin: 20px 0;
+    }
+    .divider::before, .divider::after {
+      content: ""; flex: 1;
+      height: 1px; background: var(--border);
+    }
+    .divider span { font-size: .78rem; color: var(--text-muted); white-space: nowrap; }
+
+    /* ── SCHOOL LOGIN ── */
+    .btn-school {
+      display: block; width: 100%;
+      padding: 12px 20px; border-radius: 999px;
+      background: transparent;
+      border: 1px solid rgba(168,85,247,.6);
+      color: #f3e8ff; font-size: .9rem;
+      cursor: pointer; font-family: var(--font);
+      text-align: center; text-decoration: none;
+      transition: border-color .15s, background .15s;
+    }
+    .btn-school:hover {
+      border-color: rgba(168,85,247,.9);
+      background: rgba(168,85,247,.08);
+    }
+
+    /* ── ERROR MESSAGE ── */
+    .error-msg {
+      display: none;
+      background: rgba(239,68,68,.1);
+      border: 1px solid rgba(239,68,68,.35);
+      border-radius: 12px; padding: 10px 14px;
+      font-size: .84rem; color: #fca5a5;
+      margin-bottom: 16px;
+    }
+    .error-msg.visible { display: block; }
+
+    /* ── SIGNUP LINK ── */
+    .signup-row {
+      text-align: center; margin-top: 20px;
+      font-size: .85rem; color: var(--text-muted);
+    }
+    .signup-row a { color: var(--accent); text-decoration: none; }
+    .signup-row a:hover { text-decoration: underline; }
+
+    /* ── TRUST BADGES ── */
+    .trust-row {
+      display: flex; justify-content: center;
+      gap: 20px; margin-top: 28px; flex-wrap: wrap;
+    }
+    .trust-badge {
+      display: flex; align-items: center; gap: 6px;
+      font-size: .75rem; color: #4b5563;
+    }
+    .trust-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #22c55e; flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="lp-header">
+  <div class="brand-lockup">
+    <div class="brand-mark"></div>
+    <div>
+      <div class="brand-name">LaunchPath AI</div>
+      <div class="brand-tagline">Plan Smarter · Apply Better</div>
+    </div>
+  </div>
+  <div class="lp-nav-links">
+      <a class="lp-nav-link" href="index.html">Home</a>
+      <a class="lp-nav-link signin" href="student-login.html">Sign In</a>
+  </div>
+  <button class="ask-lp-btn" onclick="lpOpenGuide()" aria-label="Ask LP"><span class="ask-lp-dot"></span>Ask LP</button>
+</header>
+
+  <!-- MAIN -->
+  <div class="page">
+    <div class="login-wrap">
+
+      <div class="login-eyebrow">Student Portal</div>
+      <h1 class="login-title">Welcome <span class="blue">back.</span></h1>
+      <p class="login-sub">Sign in to continue your college journey.</p>
+
+      <div class="login-card">
+
+        <div id="errorMsg" class="error-msg">
+          Incorrect email or password. Please try again.
+        </div>
+
+        <form id="loginForm" novalidate>
+          <div class="field">
+            <label for="email">Email address</label>
+            <input id="email" type="email" placeholder="you@email.com" autocomplete="email" required />
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" required />
+          </div>
+
+          <a href="#" class="forgot">Forgot password?</a>
+
+          <button class="btn-primary" type="submit">Sign in to LaunchPath</button>
+        </form>
+
+        <div class="divider"><span>or</span></div>
+
+        <a href="#" class="btn-school">Sign in as a School / SAT Center</a>
+
+      </div>
+
+      <div class="signup-row">
+        Don't have an account? <a href="student-profile.html">Create your profile →</a>
+      </div>
+
+      <div class="trust-row">
+        <span class="trust-badge"><span class="trust-dot"></span>Your data stays private</span>
+        <span class="trust-badge"><span class="trust-dot"></span>Cancel anytime</span>
+        <span class="trust-badge"><span class="trust-dot"></span>$25 / month</span>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Demo auth — replace with real backend call at launch
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        document.getElementById('errorMsg').classList.add('visible');
+        return;
+      }
+
+      // Check for existing demo profile
+      try {
+        const user = JSON.parse(localStorage.getItem('lp_student_user') || 'null');
+        if (user && user.email === email) {
+          window.location.href = 'preview.html'; // TODO: change to student-workplace.html when live
+          return;
+        }
+      } catch(err) {}
+
+      document.getElementById('errorMsg').classList.add('visible');
+    });
+
+    // Hide error on input
+    ['email','password'].forEach(function(id) {
+      document.getElementById(id).addEventListener('input', function() {
+        document.getElementById('errorMsg').classList.remove('visible');
+      });
+    });
+  </script>
+
+
+  <!-- ═══════════════════════════════════════════════
+       CONTENT PROTECTION — no screenshot / copy / print
+  ═══════════════════════════════════════════════════ -->
+  <style id="lp-protect">
+    html, body, * { -webkit-user-select:none!important; -moz-user-select:none!important; user-select:none!important; }
+    img { -webkit-user-drag:none; pointer-events:none; }
+    @media print { body { display:none!important; visibility:hidden!important; } }
+  </style>
+  <script id="lp-protect-js">
+  (function(){
+    document.addEventListener('contextmenu',function(e){e.preventDefault();return false;});
+    document.addEventListener('keydown',function(e){
+      var k=e.key?e.key.toLowerCase():'';
+      var c=e.ctrlKey||e.metaKey;
+      if(c&&['s','p','a','c','u'].includes(k)){e.preventDefault();return false;}
+      if(k==='printscreen'){e.preventDefault();return false;}
+      if(k==='f12'){e.preventDefault();return false;}
+      if(c&&e.shiftKey&&['i','j','c'].includes(k)){e.preventDefault();return false;}
+    });
+    document.addEventListener('dragstart',function(e){e.preventDefault();return false;});
+    var ps=document.createElement('style');
+    ps.textContent='@media print{body{display:none!important;}}';
+    document.head.appendChild(ps);
+    var shield=document.createElement('div');
+    shield.id='lp-shield';
+    shield.style.cssText='display:none;position:fixed;inset:0;z-index:99998;background:#020617;align-items:center;justify-content:center;flex-direction:column;gap:10px;';
+    shield.innerHTML='<div style="width:48px;height:48px;border-radius:50%;background:radial-gradient(circle at 30% 20%,#22d3ee,#0ea5e9 35%,#2d1b69 70%,#020617);box-shadow:0 0 40px rgba(34,211,238,.3);"></div><div style="font-family:system-ui;font-size:14px;color:#22d3ee;font-weight:700;letter-spacing:.12em;text-transform:uppercase;">LaunchPath AI</div><div style="font-family:system-ui;font-size:12px;color:rgba(255,255,255,.35);">Protected Content</div>';
+    document.body.appendChild(shield);
+    document.addEventListener('visibilitychange',function(){
+      if(document.hidden){shield.style.display='flex';}
+      else{setTimeout(function(){shield.style.display='none';},200);}
+    });
+  })();
+  </script>
+
+<!-- ── LP GUIDE WIDGET ── -->
+<style>
+.ask-lp-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.35);border-radius:18px;padding:6px 14px;cursor:pointer;font-size:12px;font-weight:600;color:#22d3ee;letter-spacing:0.2px;transition:all .15s;white-space:nowrap;font-family:inherit;}
+.ask-lp-btn:hover{background:rgba(34,211,238,0.15);border-color:rgba(34,211,238,0.6);}
+.ask-lp-dot{width:6px;height:6px;border-radius:50%;background:#22d3ee;animation:lpulse 2s infinite;flex-shrink:0;}
+@keyframes lpulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+#lpOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;align-items:flex-start;justify-content:flex-end;padding:70px 20px 0;}
+#lpOverlay.open{display:flex;}
+
+#lpBox{
+  width:400px;max-height:560px;
+  background:#ffffff;
+  border-radius:16px;
+  border:1px solid rgba(0,0,0,0.1);
+  box-shadow:0 12px 48px rgba(0,0,0,0.25);
+  display:flex;flex-direction:column;overflow:hidden;
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+#lpHead{
+  background:#0f172a;
+  padding:12px 14px;
+  display:flex;align-items:center;justify-content:space-between;
+  cursor:grab;user-select:none;flex-shrink:0;
+}
+#lpHead:active{cursor:grabbing;}
+.lp-head-left{display:flex;align-items:center;gap:9px;}
+.lp-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#22d3ee,#6366f1);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;}
+.lp-name{font-size:12px;font-weight:600;color:#fff;}
+.lp-status{font-size:10px;color:#22d3ee;margin-top:1px;}
+.lp-head-btns{display:flex;gap:5px;}
+.lp-head-btns button{background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.7);width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:background .15s;font-family:inherit;}
+.lp-head-btns button:hover{background:rgba(255,255,255,0.2);color:#fff;}
+
+#lpProgBar{height:3px;background:#e5e7eb;flex-shrink:0;}
+#lpProgFill{height:100%;background:#22d3ee;width:0%;transition:width .4s ease;}
+
+#lpProfBar{background:#f8fafc;border-bottom:1px solid #e5e7eb;padding:7px 13px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+#lpProfBar span{font-size:10px;color:#64748b;}
+#lpProfBar strong{color:#0ea5e9;}
+.lp-dots{display:flex;gap:3px;}
+.lp-dot{width:7px;height:7px;border-radius:50%;background:#e2e8f0;transition:background .3s;}
+.lp-dot.on{background:#22d3ee;}
+
+#lpMsgs{height:280px;min-height:0;overflow-y:scroll;padding:12px;display:flex;flex-direction:column;gap:9px;background:#fff;}
+#lpMsgs::-webkit-scrollbar{width:6px;}
+#lpMsgs::-webkit-scrollbar-track{background:#f1f5f9;border-radius:3px;}
+#lpMsgs::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px;}
+#lpMsgs::-webkit-scrollbar-thumb:hover{background:#94a3b8;}
+
+.lp-msg{max-width:88%;}
+.lp-msg.bot{align-self:flex-start;}
+.lp-msg.usr{align-self:flex-end;}
+.lp-bubble{padding:9px 12px;border-radius:12px;font-size:12px;line-height:1.6;}
+.lp-msg.bot .lp-bubble{background:#f1f5f9;color:#1e293b;border-bottom-left-radius:3px;}
+.lp-msg.usr .lp-bubble{background:#0ea5e9;color:#fff;border-bottom-right-radius:3px;}
+.lp-msg.bot .lp-bubble strong{color:#0369a1;}
+.lp-mtime{font-size:9px;color:#94a3b8;margin-top:2px;}
+.lp-msg.usr .lp-mtime{text-align:right;}
+.lp-typing span{width:5px;height:5px;border-radius:50%;background:#94a3b8;display:inline-block;animation:lptd 1.2s infinite;margin-right:2px;}
+.lp-typing span:nth-child(2){animation-delay:.2s;}
+.lp-typing span:nth-child(3){animation-delay:.4s;}
+@keyframes lptd{0%,80%,100%{opacity:.3}40%{opacity:1}}
+
+#lpQRs{padding:0 12px 9px;display:flex;flex-wrap:wrap;gap:5px;flex-shrink:0;background:#fff;}
+.lp-qr{background:#f8fafc;border:1px solid #cbd5e1;border-radius:14px;padding:5px 11px;font-size:11px;color:#334155;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:inherit;}
+.lp-qr:hover{background:#e0f2fe;color:#0369a1;border-color:#7dd3fc;}
+
+#lpInpRow{padding:9px 12px;border-top:1px solid #e5e7eb;display:flex;gap:7px;align-items:center;flex-shrink:0;background:#fff;}
+#lpInp{flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:18px;padding:8px 13px;font-size:12px;color:#1e293b;outline:none;font-family:inherit;}
+#lpInp::placeholder{color:#94a3b8;}
+#lpInp:focus{border-color:#7dd3fc;background:#fff;}
+#lpSendBtn{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#22d3ee,#6366f1);border:none;cursor:pointer;color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+#lpSendBtn:hover{opacity:.9;}
+
+#lpBox.minimized #lpProgBar,
+#lpBox.minimized #lpProfBar,
+#lpBox.minimized #lpMsgs,
+#lpBox.minimized #lpQRs,
+#lpBox.minimized #lpInpRow{display:none;}
+</style>
+
+<div id="lpOverlay">
+  <div id="lpBox">
+    <div id="lpHead">
+      <div class="lp-head-left">
+        <div class="lp-av">LP</div>
+        <div>
+          <div class="lp-name">LP Guide</div>
+          <div class="lp-status">● College Counselor</div>
+        </div>
+      </div>
+      <div class="lp-head-btns">
+        <button id="lpMinBtn" onclick="lpToggleMin()" title="Minimize">—</button>
+        <button onclick="lpClose()" title="Close">✕</button>
+      </div>
+    </div>
+    <div id="lpProgBar"><div id="lpProgFill"></div></div>
+    <div id="lpProfBar">
+      <span id="lpProfText">Building your <strong>profile</strong> — 0 of 6</span>
+      <div class="lp-dots" id="lpDots">
+        <div class="lp-dot"></div><div class="lp-dot"></div><div class="lp-dot"></div>
+        <div class="lp-dot"></div><div class="lp-dot"></div><div class="lp-dot"></div>
+      </div>
+    </div>
+    <div id="lpMsgs"></div>
+    <div id="lpQRs"></div>
+    <div id="lpInpRow">
+      <input id="lpInp" placeholder="Ask about colleges, essays, financial aid…" />
+      <button id="lpSendBtn">↑</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var overlay=document.getElementById('lpOverlay'),
+      box=document.getElementById('lpBox'),
+      msgs=document.getElementById('lpMsgs'),
+      qrs=document.getElementById('lpQRs'),
+      inp=document.getElementById('lpInp'),
+      profText=document.getElementById('lpProfText'),
+      progFill=document.getElementById('lpProgFill'),
+      dotsEl=document.getElementById('lpDots');
+
+  var step=0, profDone=0, inQA=false, minimized=false, started=false;
+
+  var Q=[
+    {b:"Hi! I'm LP Guide — your personal college counselor. I'll ask you 6 quick questions to personalize LaunchPath for you. Ready?", r:["Let's go!","What questions?"]},
+    {b:"What grade are you in?", r:["9th grade","10th grade","11th grade","12th grade"]},
+    {b:"What's your current GPA?", r:["3.8 – 4.0","3.5 – 3.7","3.0 – 3.4","Under 3.0"]},
+    {b:"What are you interested in studying or doing as a career?", r:["STEM / Engineering","Business / Finance","Health / Pre-med","Arts / Humanities","Not sure yet"]},
+    {b:"Do you have an SAT or ACT score?", r:["SAT 1400+","SAT 1200–1399","SAT under 1200","ACT score","Haven't tested yet"]},
+    {b:"What's your biggest challenge right now?", r:["Writing essays","Staying organized","Understanding admissions","Time management","All of the above"]},
+    {b:"What's your main goal with LaunchPath?", r:["Stronger college applications","Improve my grades","Better essays","Stay organized","All of the above"]}
+  ];
+
+  function setProgress(i){
+    progFill.style.width=((i/6)*100)+'%';
+    var d=dotsEl.querySelectorAll('.lp-dot');
+    d.forEach(function(dot,idx){dot.className='lp-dot'+(idx<i?' on':'');});
+    profText.innerHTML=i>=6?'<strong style="color:#0ea5e9">Profile complete — LP is personalized ✓</strong>':'Building your <strong>profile</strong> — '+i+' of 6';
+  }
+
+  function addBot(html,cb){
+    var t=document.createElement('div');
+    t.className='lp-msg bot';
+    t.innerHTML='<div class="lp-bubble"><span class="lp-typing"><span></span><span></span><span></span></span></div>';
+    msgs.appendChild(t); msgs.scrollTop=msgs.scrollHeight;
+    setTimeout(function(){
+      t.innerHTML='<div class="lp-bubble">'+html+'</div><div class="lp-mtime">LP Guide</div>';
+      msgs.scrollTop=msgs.scrollHeight;
+      if(cb)cb();
+    },650);
+  }
+
+  function addUser(text){
+    qrs.innerHTML='';
+    var m=document.createElement('div');
+    m.className='lp-msg usr';
+    m.innerHTML='<div class="lp-bubble">'+text+'</div><div class="lp-mtime">You</div>';
+    msgs.appendChild(m); msgs.scrollTop=msgs.scrollHeight;
+  }
+
+  function setReplies(list){
+    qrs.innerHTML='';
+    list.forEach(function(r){
+      var b=document.createElement('button');
+      b.className='lp-qr'; b.textContent=r;
+      b.onclick=function(){handle(r);};
+      qrs.appendChild(b);
+    });
+  }
+
+  // stored profile answers
+  var profile={grade:'',gpa:'',major:'',test:'',challenge:'',goal:''};
+
+  // map Q step index to profile key
+  var PROF_KEYS=['','grade','gpa','major','test','challenge','goal'];
+
+  function isEssay(t){return t.length>280||/\bmy essay\b|\bhere is my\b|\bbelow is\b/i.test(t);}
+
+  // ── SAT helpers ──────────────────────────────────────────────────
+  // parse "1180–1380" → midpoint 1280
+  function satMid(range){
+    var m=range.match(/(\d{3,4})[–\-](\d{3,4})/);
+    return m?((parseInt(m[1])+parseInt(m[2]))/2):0;
+  }
+  // parse student SAT answer to numeric
+  function studentSAT(){
+    var t=profile.test||'';
+    if(/1400\+/.test(t))return 1430;
+    if(/1200[\s–\-]*1399|1200–1399/.test(t))return 1300;
+    if(/under|below/i.test(t)&&/sat/i.test(t))return 1150;
+    if(/act/i.test(t))return 1280; // rough ACT equivalent
+    return 0;
+  }
+  // parse student GPA answer to numeric
+  function studentGPA(){
+    var g=profile.gpa||'';
+    if(/3\.8/.test(g))return 3.9;
+    if(/3\.5/.test(g))return 3.6;
+    if(/3\.0/.test(g))return 3.2;
+    if(/under|below/i.test(g))return 2.8;
+    return 0;
+  }
+  // classify school as reach/target/safety for this student
+  function classify(school){
+    var sSAT=studentSAT(), sGPA=studentGPA();
+    if(!sSAT&&!sGPA)return '';
+    var mid=satMid(school.sat);
+    var satDiff=sSAT-mid;
+    var gpaNum=parseFloat(school.minGpa||'3.5');
+    var satOk=satDiff>=-80, satStrong=satDiff>=80;
+    var gpaOk=sGPA>=(gpaNum-0.2), gpaStrong=sGPA>=(gpaNum+0.1);
+    var acc=parseFloat((school.acc||'50').replace('%',''));
+    if(acc<=8)  return satStrong&&gpaStrong?'<span style="color:#f59e0b;font-weight:600">Reach</span>':'<span style="color:#ef4444;font-weight:600">Hard Reach</span>';
+    if(acc<=20) return satStrong&&gpaStrong?'<span style="color:#22d3ee;font-weight:600">Target</span>':satOk&&gpaOk?'<span style="color:#f59e0b;font-weight:600">Reach</span>':'<span style="color:#ef4444;font-weight:600">Hard Reach</span>';
+    if(acc<=50) return satStrong&&gpaStrong?'<span style="color:#22c55e;font-weight:600">Safety</span>':satOk&&gpaOk?'<span style="color:#22d3ee;font-weight:600">Target</span>':'<span style="color:#f59e0b;font-weight:600">Reach</span>';
+    return satOk&&gpaOk?'<span style="color:#22c55e;font-weight:600">Safety</span>':'<span style="color:#22d3ee;font-weight:600">Target</span>';
+  }
+  // major-specific program notes per school
+  function majorNote(schoolKey){
+    var m=profile.major||'';
+    var notes={
+      'harvard':     {'STEM / Engineering':'Strong STEM — top-ranked across all sciences and engineering.','Business / Finance':'No undergrad business school; students go pre-business via Economics. Wharton pipeline for MBA.','Health / Pre-med':'One of the top pre-med pipelines in the country. Extraordinary research access.','Arts / Humanities':'World-class humanities — history, philosophy, literature all top-ranked.'},
+      'yale':        {'STEM / Engineering':'Strong sciences; smaller engineering program than MIT/Stanford.','Business / Finance':'No undergrad business; strong Economics. Yale SOM for MBA.','Health / Pre-med':'Excellent pre-med; strong research hospitals on campus.','Arts / Humanities':'One of the best humanities programs in the world.'},
+      'princeton':   {'STEM / Engineering':'Top-5 engineering; strong CS and applied math.','Business / Finance':'No business school; Economics is outstanding. Strong finance recruiting.','Health / Pre-med':'Strong pre-med track with excellent research opportunities.','Arts / Humanities':'Exceptional — humanities PhD pipeline is among the strongest.'},
+      'wharton':     {'Business / Finance':'#1 undergraduate business school in the country. Direct admit to Wharton is extremely competitive.','STEM / Engineering':'Wharton + Engineering dual degree available — very sought after.','Health / Pre-med':'Healthcare Management track within Wharton is excellent.','Arts / Humanities':'College of Arts & Sciences at Penn is strong alongside Wharton.'},
+      'upenn':       {'Business / Finance':'Wharton School is the #1 undergrad business program. Top Wall Street recruiting.','STEM / Engineering':'Penn Engineering strong in CS, bioengineering, systems.','Health / Pre-med':'Penn Medicine — one of the top medical schools. Pre-med pipeline is excellent.','Arts / Humanities':'College of Arts & Sciences strong alongside professional schools.'},
+      'mit':         {'STEM / Engineering':'#1 engineering school in the world. If STEM is your path, this is the pinnacle.','Business / Finance':'Sloan School of Management — top-ranked. MIT finance/econ is rigorous and highly respected.','Health / Pre-med':'Strong biology and brain/cog sciences. Medical school pipeline is excellent.','Arts / Humanities':'Smaller humanities program but rigorous. STEM focus dominates.'},
+      'stanford':    {'STEM / Engineering':'Top-3 engineering globally. Silicon Valley network is unmatched.','Business / Finance':'GSB is a top-3 MBA feeder; undergrad Economics is elite. Strong finance/tech crossover.','Health / Pre-med':'Top pre-med program with Stanford Medical School on campus.','Arts / Humanities':'Strong humanities, especially political science and psychology.'},
+      'columbia':    {'Business / Finance':'Columbia Business School feeder. Finance recruiting on Wall Street is exceptional — NYC location is a major advantage.','STEM / Engineering':'SEAS (engineering) is solid, especially CS and biomedical.','Health / Pre-med':'Strong pre-med; Columbia Medical Center is on campus.','Arts / Humanities':'Core Curriculum is world-famous. Exceptional for humanities.'},
+      'nyu':         {'Business / Finance':'Stern School of Business is top-10 undergraduate business. NYC location means direct Wall Street access.','STEM / Engineering':'Tandon School of Engineering strong in CS and tech.','Health / Pre-med':'Strong pre-med; proximity to NYC hospitals is a major asset.','Arts / Humanities':'Tisch School of the Arts is one of the best in the country.'},
+      'georgetown':  {'Business / Finance':'McDonough School of Business is excellent — strong DC/finance/consulting recruiting.','Health / Pre-med':'Strong pre-med. Georgetown Medical School on campus.','Arts / Humanities':'Outstanding — especially international relations, political science, history.','STEM / Engineering':'Smaller STEM program; not the primary strength here.'},
+      'michigan':    {'Business / Finance':'Ross School of Business is top-10 undergraduate business. Excellent recruiting.','STEM / Engineering':'Top-10 engineering school. Strong in CS, mechanical, aerospace.','Health / Pre-med':'Excellent pre-med; University of Michigan Health System is top-ranked.','Arts / Humanities':'LSA College strong across disciplines.'},
+      'uc berkeley': {'STEM / Engineering':'Haas School and College of Engineering both top-5. CS is extremely competitive.','Business / Finance':'Haas School of Business — top-5 undergrad business. Very hard to get into directly.','Health / Pre-med':'Strong pre-med pipeline; UCSF Medical School nearby.','Arts / Humanities':'Strong humanities and social sciences.'},
+      'carnegie mellon':{STEM:'#1 CS program in the country. If you want tech/engineering, this is top of the list.','Business / Finance':'Tepper School of Business — top-ranked, strong quant/finance focus.','Health / Pre-med':'Smaller pre-med program; strong biomedical engineering.','Arts / Humanities':'School of Drama and College of Fine Arts are outstanding.'},
+      'duke':        {'Health / Pre-med':'Excellent pre-med — Duke Medical School is top-10. Strong research opportunities.','Business / Finance':'Fuqua School feeder; undergrad Economics strong. Strong finance recruiting.','STEM / Engineering':'Pratt School of Engineering solid, especially biomedical.','Arts / Humanities':'Trinity College strong across disciplines.'},
+      'vanderbilt':  {'Health / Pre-med':'Outstanding pre-med program — Vanderbilt Medical Center is world-class.','Business / Finance':'Owen Graduate School feeder; strong finance recruiting in Southeast.','STEM / Engineering':'School of Engineering solid, growing CS program.','Arts / Humanities':'Blair School of Music is exceptional; strong humanities.'},
+      'emory':       {'Health / Pre-med':'Top pre-med school in the country — Emory Hospital and CDC proximity is unmatched.','Business / Finance':'Goizueta Business School strong for undergrad. Atlanta finance/consulting hub.','STEM / Engineering':'Smaller STEM program; pre-med sciences are the strength.','Arts / Humanities':'Strong liberal arts college.'},
+      'penn state':  {'Business / Finance':'Smeal College of Business is well-regarded and has strong regional recruiting.','STEM / Engineering':'Strong engineering — Penn State is a top engineering school, especially for aerospace and mechanical.','Health / Pre-med':'Solid pre-med track. Penn State Hershey Medical Center nearby.','Arts / Humanities':'Large liberal arts college with strong programs.'},
+      'rutgers':     {'Business / Finance':'Rutgers Business School — strong in NJ/NYC market. Good value for finance.','STEM / Engineering':'Strong engineering and CS programs. Good research university.','Health / Pre-med':'Strong pre-med; Robert Wood Johnson Medical School on campus is a major asset.','Arts / Humanities':'Large state school with solid liberal arts programs.'},
+      'boston university':{'Health / Pre-med':'Strong pre-med — BU Medical School on campus. Excellent pipeline.','Business / Finance':'Questrom School of Business — solid, strong Boston recruiting.','STEM / Engineering':'Strong engineering and CS. Growing tech programs.','Arts / Humanities':'College of Arts & Sciences strong, especially communications.'},
+      'northeastern':{'STEM / Engineering':'Top co-op engineering program. CS is excellent — Silicon Valley and Boston tech recruiting.','Business / Finance':'D\'Amore-McKim School of Business strong, especially with co-op advantage.','Health / Pre-med':'Strong health sciences and pre-med track.','Arts / Humanities':'Good programs; STEM/business are the primary strengths.'},
+      'fordham':     {'Business / Finance':'Gabelli School of Business in NYC — strong Wall Street pipeline. Excellent value for finance.','Arts / Humanities':'Strong Jesuit liberal arts tradition. Law school pipeline excellent.','Health / Pre-med':'Solid pre-med. Fordham\'s NYC location provides clinical access.','STEM / Engineering':'Smaller STEM program; not the primary strength.'},
+      'georgia tech':{'STEM / Engineering':'Top-5 engineering school. Exceptional for CS, mechanical, electrical. Best STEM value in the country.','Business / Finance':'Scheller College of Business strong in quantitative finance and management.','Health / Pre-med':'Biomedical engineering is excellent; traditional pre-med is smaller.','Arts / Humanities':'Ivan Allen College strong in public policy and international affairs.'},
+      'unc':         {'Business / Finance':'Kenan-Flagler Business School — top-15 undergraduate business. Excellent value.','Health / Pre-med':'Strong pre-med — UNC School of Medicine is top-ranked.','STEM / Engineering':'Strong public health, CS growing. Not primary engineering strength.','Arts / Humanities':'Strong journalism, communications, and liberal arts.'},
+      'virginia':    {'Business / Finance':'McIntire School of Commerce — one of the top undergraduate business schools in the country.','STEM / Engineering':'Strong engineering school, especially systems and electrical.','Health / Pre-med':'UVA Medical School on campus — excellent pre-med pipeline.','Arts / Humanities':'College of Arts & Sciences strong, especially political science and history.'},
+      'wake forest': {'Business / Finance':'School of Business solid; strong Southeast recruiting. Good for finance.','Health / Pre-med':'Excellent pre-med — Wake Forest School of Medicine on campus.','STEM / Engineering':'Growing STEM programs; biology/chemistry are strong.','Arts / Humanities':'Strong liberal arts tradition.'},
+      'tufts':       {'Health / Pre-med':'Strong pre-med and international health programs. Tufts Medical School nearby.','STEM / Engineering':'Strong engineering, especially biomedical.','Business / Finance':'No dedicated business school; Economics is solid.','Arts / Humanities':'Excellent liberal arts college.'},
+      'notre dame':  {'Business / Finance':'Mendoza College of Business — top-15 undergraduate business. Strong Midwest recruiting.','STEM / Engineering':'Strong engineering school.','Health / Pre-med':'Solid pre-med track.','Arts / Humanities':'Strong Jesuit liberal arts tradition.'},
+      'rice':        {'STEM / Engineering':'Top-10 engineering school. Exceptional for CS, electrical, bioengineering.','Business / Finance':'Jones School of Business solid. Houston energy/finance sector access.','Health / Pre-med':'Strong pre-med — Rice/Baylor medical partnership is excellent.','Arts / Humanities':'Shepherd School of Music top-ranked. Strong liberal arts.'}
+    };
+    var n=notes[schoolKey];
+    if(n&&m&&n[m])return n[m];
+    // fallback by major category
+    if(/business|finance/i.test(m)) return 'Check LP\'s College Match to filter schools specifically strong for Business programs.';
+    if(/stem|engineer/i.test(m)) return 'LP\'s College Match can surface schools ranked specifically for Engineering and STEM.';
+    if(/health|med|pre-med/i.test(m)) return 'Use College Match to find schools with strong pre-med pipelines and on-campus medical schools.';
+    if(/art|human/i.test(m)) return 'LP\'s College Match highlights schools with strong humanities and arts programs.';
+    return '';
+  }
+
+  // grade-aware tone prefix
+  function gradeTone(){
+    var g=profile.grade||'';
+    if(/9th/i.test(g)) return 'You\'re in 9th grade — you have more time than most students think. ';
+    if(/10th/i.test(g)) return 'As a sophomore, you\'re in a great position to build your profile early. ';
+    if(/11th/i.test(g)) return 'Junior year is the most important — what you do now directly shapes your application. ';
+    if(/12th/i.test(g)) return 'Senior year — decisions matter right now. ';
+    return '';
+  }
+
+  // challenge-aware nudge
+  function challengeNudge(){
+    var c=profile.challenge||'';
+    if(/writing|essay/i.test(c)) return ' Given your biggest challenge is essays, I\'d prioritize <strong>Essay Studio</strong> — start early and iterate.';
+    if(/organ/i.test(c)) return ' Since staying organized is your challenge, lean on the <strong>Student Workspace</strong> to track deadlines and tasks.';
+    if(/admissions/i.test(c)) return ' Since admissions is your challenge, I\'m here anytime to break it down step by step.';
+    if(/time/i.test(c)) return ' Since time management is your challenge, the <strong>Student Workspace</strong> will help you stay on top of deadlines.';
+    return '';
+  }
+
+  // ── 75-school database ────────────────────────────────────────────
+  // Fields: sat, act, minGpa, acc, tuition, note, strengths (array of major keywords)
+  var SCHOOLS={
+    // ── Ivies ──
+    "harvard":        {sat:"1500–1580",act:"34–36",minGpa:"3.9",acc:"3%",   tuition:"$82,866/yr",note:"Need-blind — meets 100% of demonstrated need. No loans in packages."},
+    "yale":           {sat:"1470–1570",act:"33–35",minGpa:"3.9",acc:"4.6%", tuition:"$83,880/yr",note:"Meets 100% of demonstrated need. Strong need-blind policy."},
+    "princeton":      {sat:"1470–1570",act:"33–35",minGpa:"3.9",acc:"4%",   tuition:"$82,650/yr",note:"No loans in aid packages — grants only. Outstanding financial aid."},
+    "columbia":       {sat:"1490–1570",act:"34–36",minGpa:"3.9",acc:"3.9%", tuition:"$87,000/yr",note:"NYC location means Wall Street and media access. Core Curriculum required."},
+    "upenn":          {sat:"1480–1570",act:"34–36",minGpa:"3.9",acc:"6.5%", tuition:"$87,272/yr",note:"Wharton is the #1 undergrad business school. Strong aid for families under $125k."},
+    "wharton":        {sat:"1480–1570",act:"34–36",minGpa:"3.9",acc:"6.5%", tuition:"$87,272/yr",note:"Wharton is the #1 undergrad business school. Direct admit is highly competitive."},
+    "brown":          {sat:"1470–1560",act:"33–35",minGpa:"3.9",acc:"5%",   tuition:"$85,628/yr",note:"Open Curriculum — you design your own program. Meets 100% of need."},
+    "dartmouth":      {sat:"1440–1560",act:"32–35",minGpa:"3.9",acc:"6.2%", tuition:"$85,980/yr",note:"Strong alumni network. Meets 100% of demonstrated need."},
+    "cornell":        {sat:"1400–1540",act:"32–35",minGpa:"3.9",acc:"7.6%", tuition:"$87,000/yr",note:"Largest Ivy. Aid varies by college. Strong engineering and hotel management."},
+    // ── Top Private Universities ──
+    "mit":            {sat:"1510–1580",act:"34–36",minGpa:"3.9",acc:"3.9%", tuition:"$82,990/yr",note:"#1 engineering and tech. Strong financial aid — average package is generous."},
+    "stanford":       {sat:"1500–1570",act:"34–36",minGpa:"3.9",acc:"3.7%", tuition:"$84,400/yr",note:"Silicon Valley network unmatched. Families under $150k often pay little to nothing."},
+    "duke":           {sat:"1480–1570",act:"34–36",minGpa:"3.9",acc:"5.8%", tuition:"$85,690/yr",note:"Meets 100% of demonstrated need. Top pre-med and research institution."},
+    "vanderbilt":     {sat:"1480–1570",act:"34–36",minGpa:"3.9",acc:"6.7%", tuition:"$84,000/yr",note:"Meets 100% of need. Strong merit scholarships — Cornelius Vanderbilt full ride."},
+    "northwestern":   {sat:"1470–1570",act:"33–35",minGpa:"3.9",acc:"6.8%", tuition:"$86,000/yr",note:"Strong journalism, Kellogg MBA feeder, top engineering. Meets 100% of need."},
+    "johns hopkins":  {sat:"1470–1570",act:"33–35",minGpa:"3.9",acc:"7%",   tuition:"$83,000/yr",note:"#1 pre-med in the country. Bloomberg School of Public Health on campus."},
+    "rice":           {sat:"1490–1570",act:"34–36",minGpa:"3.9",acc:"8.7%", tuition:"$72,000/yr",note:"Exceptional value for a top-10 school. Strong STEM and music. Small class sizes."},
+    "notre dame":     {sat:"1400–1560",act:"32–35",minGpa:"3.9",acc:"12%",  tuition:"$81,000/yr",note:"Mendoza Business School top-15 undergrad. Strong alumni loyalty and network."},
+    "georgetown":     {sat:"1380–1550",act:"31–35",minGpa:"3.9",acc:"12%",  tuition:"$82,000/yr",note:"Top for pre-law, international relations, and government. DC location invaluable."},
+    "emory":          {sat:"1400–1530",act:"32–35",minGpa:"3.9",acc:"11%",  tuition:"$80,000/yr",note:"#1 pre-med pipeline — Emory Hospital and CDC proximity unmatched."},
+    "carnegie mellon":{sat:"1460–1570",act:"33–35",minGpa:"3.9",acc:"11%",  tuition:"$84,000/yr",note:"#1 CS program in the country. Tepper Business strong in quant/finance."},
+    "cmu":            {sat:"1460–1570",act:"33–35",minGpa:"3.9",acc:"11%",  tuition:"$84,000/yr",note:"#1 CS program in the country. Tepper Business strong in quant/finance."},
+    "tufts":          {sat:"1430–1560",act:"32–35",minGpa:"3.9",acc:"9.5%", tuition:"$84,000/yr",note:"Strong international relations, pre-med, and engineering. Tufts Medical School nearby."},
+    "washington university in st louis":{sat:"1500–1570",act:"34–36",minGpa:"3.9",acc:"12%",tuition:"$85,000/yr",note:"WashU meets 100% of need. Strong pre-med — Barnes Jewish Medical Center on campus."},
+    "washu":          {sat:"1500–1570",act:"34–36",minGpa:"3.9",acc:"12%",  tuition:"$85,000/yr",note:"WashU meets 100% of need. Strong pre-med."},
+    "wake forest":    {sat:"1340–1500",act:"31–34",minGpa:"3.8",acc:"21%",  tuition:"$82,000/yr",note:"Test-optional. Wake Forest Medical School on campus. Strong business recruiting."},
+    "nyu":            {sat:"1350–1530",act:"31–34",minGpa:"3.7",acc:"12%",  tuition:"$86,000/yr",note:"Stern School is top-10 undergrad business. NYC = direct Wall Street access. Limited merit aid."},
+    "boston university":{sat:"1330–1500",act:"31–34",minGpa:"3.7",acc:"18%",tuition:"$82,000/yr",note:"BU Medical School on campus — strong pre-med pipeline. Merit scholarships available."},
+    "bu":             {sat:"1330–1500",act:"31–34",minGpa:"3.7",acc:"18%",  tuition:"$82,000/yr",note:"BU Medical School on campus. Strong pre-med pipeline. Merit scholarships available."},
+    "boston college": {sat:"1340–1510",act:"31–34",minGpa:"3.8",acc:"17%",  tuition:"$81,000/yr",note:"Strong Jesuit liberal arts. Carroll School of Management solid. Good financial aid."},
+    "bc":             {sat:"1340–1510",act:"31–34",minGpa:"3.8",acc:"17%",  tuition:"$81,000/yr",note:"Strong Jesuit liberal arts. Carroll School of Management solid."},
+    "northeastern":   {sat:"1420–1550",act:"33–35",minGpa:"3.9",acc:"6.7%", tuition:"$84,000/yr",note:"Best co-op program in the country — graduates with 1.5 years of real work experience."},
+    "tulane":         {sat:"1330–1500",act:"30–33",minGpa:"3.7",acc:"9.7%", tuition:"$76,000/yr",note:"Strong public health and business. New Orleans culture. Generous merit aid."},
+    "lehigh":         {sat:"1280–1460",act:"29–33",minGpa:"3.6",acc:"42%",  tuition:"$75,000/yr",note:"Strong engineering and business. Good merit aid for strong applicants."},
+    "villanova":      {sat:"1270–1460",act:"29–33",minGpa:"3.7",acc:"28%",  tuition:"$77,000/yr",note:"Villanova School of Business strong. Strong Jesuit values and alumni network."},
+    "george washington":{sat:"1250–1450",act:"28–32",minGpa:"3.6",acc:"41%",tuition:"$80,000/yr",note:"DC location — excellent for political science, international affairs, law. Strong co-op."},
+    "gwu":            {sat:"1250–1450",act:"28–32",minGpa:"3.6",acc:"41%",  tuition:"$80,000/yr",note:"DC location — great for policy, law, international affairs."},
+    "american university":{sat:"1190–1400",act:"26–31",minGpa:"3.5",acc:"35%",tuition:"$72,000/yr",note:"DC location. Kogod School of Business solid. Strong international relations."},
+    "fordham":        {sat:"1200–1390",act:"27–31",minGpa:"3.6",acc:"54%",  tuition:"$76,000/yr",note:"Gabelli School of Business — strong Wall Street pipeline. NYC location is a real advantage."},
+    "syracuse":       {sat:"1150–1360",act:"25–31",minGpa:"3.4",acc:"60%",  tuition:"$74,000/yr",note:"Newhouse School of Communications is #1 in the country. Strong business and engineering."},
+    "hofstra":        {sat:"1100–1310",act:"23–29",minGpa:"3.3",acc:"68%",  tuition:"$60,000/yr",note:"Strong pre-law and business. NYC proximity. Generous merit aid available."},
+    "seton hall":     {sat:"1080–1280",act:"22–28",minGpa:"3.3",acc:"79%",  tuition:"$58,000/yr",note:"Strong nursing, business, diplomacy/international relations. Good financial aid."},
+    "quinnipiac":     {sat:"1090–1270",act:"22–28",minGpa:"3.2",acc:"75%",  tuition:"$62,000/yr",note:"Strong health sciences, nursing, and journalism programs. Good merit aid."},
+    "sacred heart":   {sat:"1020–1220",act:"20–26",minGpa:"3.0",acc:"74%",  tuition:"$55,000/yr",note:"Strong nursing and business. Generous merit scholarships. Good safety school."},
+    // ── Top Public Universities ──
+    "uc berkeley":    {sat:"1310–1530",act:"29–35",minGpa:"3.9",acc:"14%",  tuition:"$44,066/yr (OOS)",note:"In-state ~$14,312/yr. Haas Business and Engineering are top-5."},
+    "berkeley":       {sat:"1310–1530",act:"29–35",minGpa:"3.9",acc:"14%",  tuition:"$44,066/yr (OOS)",note:"In-state ~$14,312/yr. Haas Business and Engineering are top-5."},
+    "ucla":           {sat:"1290–1510",act:"29–34",minGpa:"3.9",acc:"8.8%", tuition:"$43,473/yr (OOS)",note:"In-state ~$13,700/yr. Strong across all disciplines. Excellent campus culture."},
+    "michigan":       {sat:"1360–1530",act:"32–35",minGpa:"3.9",acc:"18%",  tuition:"$55,334/yr (OOS)",note:"In-state ~$17,786/yr. Ross Business and Engineering top-10. Go Blue."},
+    "university of michigan":{sat:"1360–1530",act:"32–35",minGpa:"3.9",acc:"18%",tuition:"$55,334/yr (OOS)",note:"In-state ~$17,786/yr. Ross Business top-10."},
+    "virginia":       {sat:"1350–1520",act:"31–34",minGpa:"4.0",acc:"19%",  tuition:"$54,000/yr (OOS)",note:"In-state ~$22,000/yr. McIntire School of Commerce is top-5 undergrad business."},
+    "uva":            {sat:"1350–1520",act:"31–34",minGpa:"4.0",acc:"19%",  tuition:"$54,000/yr (OOS)",note:"In-state ~$22,000/yr. McIntire School of Commerce is top-5 undergrad business."},
+    "unc":            {sat:"1290–1470",act:"29–34",minGpa:"3.9",acc:"19%",  tuition:"$41,000/yr (OOS)",note:"In-state ~$9,000/yr. Exceptional value. Strong journalism and Kenan-Flagler Business."},
+    "georgia tech":   {sat:"1370–1530",act:"32–35",minGpa:"4.0",acc:"16%",  tuition:"$42,000/yr (OOS)",note:"In-state ~$12,000/yr. Top-5 engineering school — best STEM value in the US."},
+    "usc":            {sat:"1360–1530",act:"32–35",minGpa:"3.8",acc:"12%",  tuition:"$88,000/yr",note:"Marshall School of Business and Viterbi Engineering top-ranked. LA network strong."},
+    "university of southern california":{sat:"1360–1530",act:"32–35",minGpa:"3.8",acc:"12%",tuition:"$88,000/yr",note:"Marshall Business and Viterbi Engineering top-ranked."},
+    "penn state":     {sat:"1180–1380",act:"26–31",minGpa:"3.6",acc:"56%",  tuition:"$49,996/yr (OOS)",note:"In-state ~$24,476/yr. Smeal Business and Engineering strong. Rolling admissions."},
+    "psu":            {sat:"1180–1380",act:"26–31",minGpa:"3.6",acc:"56%",  tuition:"$49,996/yr (OOS)",note:"In-state ~$24,476/yr. Smeal Business and Engineering strong. Rolling admissions."},
+    "rutgers":        {sat:"1200–1440",act:"26–32",minGpa:"3.7",acc:"61%",  tuition:"$47,000/yr (OOS)",note:"In-state ~$17,000/yr. RWJ Medical School on campus. Strong for NJ students."},
+    "ohio state":     {sat:"1230–1440",act:"27–32",minGpa:"3.7",acc:"54%",  tuition:"$43,000/yr (OOS)",note:"In-state ~$12,000/yr. Fisher College of Business solid. Strong Big Ten network."},
+    "osu":            {sat:"1230–1440",act:"27–32",minGpa:"3.7",acc:"54%",  tuition:"$43,000/yr (OOS)",note:"In-state ~$12,000/yr. Fisher College of Business solid."},
+    "florida":        {sat:"1280–1460",act:"28–33",minGpa:"4.0",acc:"31%",  tuition:"$37,000/yr (OOS)",note:"In-state ~$6,400/yr — exceptional value. Warrington Business and Engineering strong."},
+    "university of florida":{sat:"1280–1460",act:"28–33",minGpa:"4.0",acc:"31%",tuition:"$37,000/yr (OOS)",note:"In-state ~$6,400/yr — exceptional value."},
+    "uf":             {sat:"1280–1460",act:"28–33",minGpa:"4.0",acc:"31%",  tuition:"$37,000/yr (OOS)",note:"In-state ~$6,400/yr — exceptional value. Warrington Business and Engineering strong."},
+    "texas":          {sat:"1230–1480",act:"27–33",minGpa:"3.8",acc:"31%",  tuition:"$42,000/yr (OOS)",note:"In-state ~$11,000/yr. McCombs Business and Cockrell Engineering top-ranked."},
+    "ut austin":      {sat:"1230–1480",act:"27–33",minGpa:"3.8",acc:"31%",  tuition:"$42,000/yr (OOS)",note:"In-state ~$11,000/yr. McCombs Business and Cockrell Engineering top-ranked."},
+    "purdue":         {sat:"1200–1470",act:"26–33",minGpa:"3.7",acc:"67%",  tuition:"$40,000/yr (OOS)",note:"In-state ~$10,000/yr. #1 undergrad engineering value in the US. Top aerospace program."},
+    "wisconsin":      {sat:"1300–1480",act:"28–33",minGpa:"3.8",acc:"49%",  tuition:"$40,000/yr (OOS)",note:"In-state ~$11,000/yr. Business, engineering, and nursing all top-ranked."},
+    "illinois":       {sat:"1290–1500",act:"28–34",minGpa:"3.8",acc:"45%",  tuition:"$44,000/yr (OOS)",note:"In-state ~$16,000/yr. Gies Business and Grainger Engineering both top-10."},
+    "uiuc":           {sat:"1290–1500",act:"28–34",minGpa:"3.8",acc:"45%",  tuition:"$44,000/yr (OOS)",note:"In-state ~$16,000/yr. Gies Business and Grainger Engineering both top-10."},
+    "uc san diego":   {sat:"1290–1500",act:"28–34",minGpa:"3.9",acc:"26%",  tuition:"$47,000/yr (OOS)",note:"In-state ~$15,000/yr. Top research university. Strong STEM and pre-med."},
+    "ucsd":           {sat:"1290–1500",act:"28–34",minGpa:"3.9",acc:"26%",  tuition:"$47,000/yr (OOS)",note:"In-state ~$15,000/yr. Top research university. Strong STEM and pre-med."},
+    "uc santa barbara":{sat:"1230–1470",act:"26–32",minGpa:"3.9",acc:"26%", tuition:"$46,000/yr (OOS)",note:"In-state ~$14,000/yr. Strong research. Beautiful campus culture."},
+    "ucsb":           {sat:"1230–1470",act:"26–32",minGpa:"3.9",acc:"26%",  tuition:"$46,000/yr (OOS)",note:"In-state ~$14,000/yr. Strong research and engineering."},
+    "uc davis":       {sat:"1170–1420",act:"24–32",minGpa:"3.9",acc:"37%",  tuition:"$46,000/yr (OOS)",note:"In-state ~$15,000/yr. #1 veterinary school. Strong agriculture, biology, engineering."},
+    "william and mary":{sat:"1310–1480",act:"30–34",minGpa:"3.9",acc:"35%", tuition:"$52,000/yr (OOS)",note:"In-state ~$24,000/yr. Outstanding public liberal arts. Strong law pipeline."},
+    // ── Strong Regionals / Hidden Gems ──
+    "lehigh":         {sat:"1280–1460",act:"29–33",minGpa:"3.6",acc:"42%",  tuition:"$75,000/yr",note:"Strong engineering and business. Good merit aid for competitive applicants."},
+    "rensselaer":     {sat:"1290–1510",act:"28–34",minGpa:"3.7",acc:"57%",  tuition:"$78,000/yr",note:"RPI — top engineering and technology school. Good value for STEM students."},
+    "rpi":            {sat:"1290–1510",act:"28–34",minGpa:"3.7",acc:"57%",  tuition:"$78,000/yr",note:"Top engineering and technology school. Good merit aid."},
+    "stevens institute":{sat:"1260–1480",act:"27–32",minGpa:"3.5",acc:"45%",tuition:"$64,000/yr",note:"Stevens — strong STEM in Hoboken NJ. High co-op placement rate. Good for finance/tech."},
+    "rowan":          {sat:"1060–1260",act:"20–26",minGpa:"3.1",acc:"72%",  tuition:"$37,000/yr (OOS)",note:"In-state ~$17,000/yr. Strong engineering, education, business. Great NJ value."},
+    "montclair state":{sat:"980–1180", act:"18–24",minGpa:"2.8",acc:"83%",  tuition:"$32,000/yr (OOS)",note:"In-state ~$14,000/yr. Strong education, business, arts. Accessible NJ option."},
+    "kean":           {sat:"920–1120", act:"17–22",minGpa:"2.5",acc:"90%",  tuition:"$28,000/yr (OOS)",note:"In-state ~$12,000/yr. Open access NJ school. Good for career-focused programs."}
+  };
+
+  function findSchool(l){
+    var keys=Object.keys(SCHOOLS);
+    // longest match first to avoid partial hits
+    keys.sort(function(a,b){return b.length-a.length;});
+    for(var i=0;i<keys.length;i++){if(l.indexOf(keys[i])!==-1)return{name:keys[i],data:SCHOOLS[keys[i]]};}
+    return null;
+  }
+
+  function capFirst(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+
+  function qa(t){
+    var l=t.toLowerCase();
+    var sSAT=studentSAT(), sGPA=studentGPA();
+    var hasPrfSAT=!!profile.test&&!/haven/i.test(profile.test);
+    var hasPrfGPA=!!profile.gpa;
+    var grade=profile.grade||'';
+    var major=profile.major||'';
+    var goal=profile.goal||'';
+    var challenge=profile.challenge||'';
+
+    // Off-topic guard — must be first
+    if(/\b(nba|nfl|nhl|mlb|nascar|soccer|football|basketball|baseball|hockey|game|match|sport|espn|score|team|player|concert|movie|film|tv show|netflix|music|song|artist|celebrity|weather|stock|crypto|bitcoin|restaurant|recipe|food|dating|tiktok|instagram|snapchat|youtube|meme|joke|viral|politics|election|war|news)\b/i.test(l)){
+      return "I'm only able to help with college and academic topics.";
+    }
+
+    if(isEssay(t)) return "For essay coaching, head to <strong>Essay Studio</strong> — it gives you line-by-line AI feedback, scoring, and polish. I'm here for admissions strategy and college questions.";
+
+    var found=findSchool(l);
+
+    // ── School + Tuition ──
+    if(found && /tuition|cost|price|afford|expensive|how much/.test(l)){
+      var s=found.data, n=capFirst(found.name);
+      var cls=classify(s);
+      var mNote=majorNote(found.name);
+      var personalLine='';
+      if(hasPrfGPA&&hasPrfSAT) personalLine=' For your profile, this school is a <strong>'+cls+'</strong>.';
+      else if(hasPrfGPA||hasPrfSAT) personalLine=' Finish your profile so I can tell you exactly where you stand here.';
+      return gradeTone()+"<strong>"+n+"</strong> total cost of attendance is approximately <strong>"+s.tuition+"</strong>. "+s.note+(personalLine?personalLine:'')+(mNote?' <em>'+mNote+'</em>':'')+challengeNudge()+" Use LP\'s <strong>ROI Calculator</strong> to model net cost after aid vs your other schools.";
+    }
+
+    // ── School + SAT/stats/chances ──
+    if(found && /sat|act|score|gpa|stats|admit|acceptance|chance|get in|competitive/.test(l)){
+      var s=found.data, n=capFirst(found.name);
+      var cls=classify(s);
+      var mNote=majorNote(found.name);
+      var personalLine='';
+      if(hasPrfGPA&&hasPrfSAT){
+        personalLine=' Based on your profile ('+profile.gpa+' GPA, '+profile.test+'), <strong>'+n+'</strong> is a <strong>'+cls+'</strong> for you.';
+        if(/reach|hard/i.test(cls)) personalLine+=' Your essay and activities will need to be exceptional.';
+        else if(/target/i.test(cls)) personalLine+=' You\'re competitive — a strong essay locks it in.';
+        else personalLine+=' You\'re in a strong position here.';
+      } else if(hasPrfGPA||hasPrfSAT){
+        personalLine=' Complete your profile and I can tell you exactly where you stand.';
+      }
+      return "<strong>"+n+"</strong> — SAT middle 50%: <strong>"+s.sat+"</strong> · ACT: <strong>"+s.act+"</strong> · Min GPA: <strong>"+s.minGpa+"</strong> · Acceptance rate: <strong>"+s.acc+"</strong>."+personalLine+(mNote?' '+mNote:'')+challengeNudge()+" Use <strong>Scattergram</strong> in LP to see your odds vs real admitted students.";
+    }
+
+    // ── General school mention (no specific question type) ──
+    if(found){
+      var s=found.data, n=capFirst(found.name);
+      var cls=classify(s);
+      var mNote=majorNote(found.name);
+      var fitLine='';
+      if(hasPrfGPA&&hasPrfSAT){
+        fitLine=' For your profile, this is a <strong>'+cls+'</strong>.';
+        if(/business|finance/i.test(major)&&mNote) fitLine+=' '+mNote;
+        else if(mNote) fitLine+=' '+mNote;
+        if(/reach|hard/i.test(cls)&&/11th|12th/i.test(grade)) fitLine+=' If you\'re serious about it, start your essay early and make it count.';
+        else if(/target/i.test(cls)) fitLine+=' Strong application should get you in — focus on essays and recommendations.';
+        else if(/safety/i.test(cls)) fitLine+=' Good safety school for your list. Make sure you have targets above this too.';
+      } else if(mNote){
+        fitLine=' '+mNote;
+      }
+      return gradeTone()+"<strong>"+n+"</strong> — SAT: <strong>"+s.sat+"</strong> · Acceptance rate: <strong>"+s.acc+"</strong> · Tuition: <strong>"+s.tuition+"</strong>."+fitLine+" "+s.note+challengeNudge();
+    }
+
+    // ── Topic-based personalized responses ──
+    if(/common app/.test(l)){
+      var line="Common App opens August 1. Regular Decision deadlines are typically January 1. Early Decision/Action: November 1 or 15. You can apply to up to 20 schools.";
+      if(/9th|10th/i.test(grade)) line+=" You have plenty of time — use it to build strong activities and grades now.";
+      if(/11th/i.test(grade)) line+=" This summer is the right time to start your Common App essay draft. Don't wait until senior year.";
+      if(/12th/i.test(grade)) line+=" You should be working on this now. I can help you prioritize if needed.";
+      return line;
+    }
+    if(/early decision|early action/.test(l)){
+      var line="<strong>Early Decision</strong> is binding — you must attend if accepted and it can boost your odds 10–20%. <strong>Early Action</strong> is non-binding and shows demonstrated interest.";
+      if(hasPrfSAT&&hasPrfGPA&&/reach|hard/i.test(classify({sat:"1470–1570",minGpa:"3.9",acc:"6%"})))
+        line+=" For students applying to reach schools, ED can be a real advantage — it signals genuine commitment.";
+      if(/writing|essay/i.test(challenge)) line+=" Since essays are your challenge, give yourself extra time before committing to an ED deadline.";
+      return line;
+    }
+    if(/financial aid|fafsa|scholarship/.test(l)){
+      var line="File the FAFSA on October 1 — as early as possible. Some schools also require the CSS Profile. Apply to schools where your stats are above average for the best merit aid.";
+      if(/business|finance/i.test(major)) line+=" Many business-focused schools offer strong merit scholarships — Fordham, Villanova, and Syracuse are worth looking at alongside the big names.";
+      if(/health|pre-med/i.test(major)) line+=" Schools like Vanderbilt, Emory, and WashU have strong need-blind policies — often better aid than state schools despite higher sticker prices.";
+      return line;
+    }
+    if(/sat.*score|score.*sat|improve.*sat|how.*sat|what.*sat/.test(l)){
+      if(hasPrfSAT){
+        var line="You have a <strong>"+profile.test+"</strong> right now. ";
+        if(/1400\+/.test(profile.test)) line+="That opens the door to most schools on any balanced list. For top-20 schools, 1450+ strengthens your application significantly.";
+        else if(/1200/.test(profile.test)) line+="A 1300–1350+ would move you from competitive to strong at most target schools. Focused prep on one section makes a real difference.";
+        else line+="Targeted test prep — even 100 points — can meaningfully change your school options. Use LP's College Match to see what scores unlock.";
+        if(/11th|12th/i.test(grade)) line+=" You still have time to retest.";
+        return line;
+      }
+      return "A competitive SAT depends on your target schools. 1400+ opens most doors. 1500+ for top-25. Use <strong>Scattergram</strong> in LP to see real admitted student scores at any school you\'re considering.";
+    }
+    if(/essay|personal statement/.test(l)){
+      var line="For actual essay coaching — feedback, scoring, rewriting — use <strong>Essay Studio</strong>. For strategy: ";
+      if(/business|finance/i.test(major)) line+="business-focused schools want to see initiative, leadership, and real impact. Avoid generic 'I want to help people' narratives.";
+      else if(/health|pre-med/i.test(major)) line+="pre-med essays are most powerful when they show a specific moment that confirmed your path — not just 'I want to help people.'";
+      else if(/stem|engineer/i.test(major)) line+="engineering essays should show problem-solving curiosity, not just grades. A project, a failure you learned from, or a moment of genuine discovery.";
+      else line+="authenticity beats perfection. Admissions officers read thousands of essays — write something only you could write.";
+      if(/9th|10th/i.test(grade)) line+=" You have time to build real stories first — focus on activities now, essays later.";
+      return line;
+    }
+    if(/scattergram|odds|chances|likelihood/.test(l)){
+      var line="<strong>Scattergram</strong> in LP plots your GPA and SAT against real admitted, waitlisted, and rejected students at any school.";
+      if(hasPrfGPA&&hasPrfSAT) line+=" With your "+profile.gpa+" GPA and "+profile.test+", it\'ll show you exactly where you stand visually — much better than guessing.";
+      else line+=" Once your profile is complete, it\'ll give you a visual read on your real odds.";
+      return line;
+    }
+    if(/deadline|when.*apply|application.*date/.test(l)){
+      var line="Most Regular Decision deadlines: January 1. Early Action/Decision: November 1–15. Rolling admissions (like Penn State, Rutgers): apply as early as September.";
+      if(/12th/i.test(grade)) line+=" You\'re a senior — these are your deadlines now. Make sure your school list is locked by October.";
+      if(/11th/i.test(grade)) line+=" You\'re a junior — start your school list this spring so you\'re not scrambling in the fall.";
+      return line;
+    }
+    if(/college match|find.*school|school.*list|build.*list/.test(l)){
+      var line="<strong>College Match</strong> in LP filters schools by your GPA, SAT, major interest, and location preference — giving you a balanced list of safeties, targets, and reaches.";
+      if(hasPrfGPA&&hasPrfSAT) line+=" With your profile entered, it\'ll calibrate recommendations directly to your stats.";
+      if(/business|finance/i.test(major)) line+=" For Business/Finance specifically, it can surface schools with top-ranked business programs at your acceptance level.";
+      return line;
+    }
+    if(/roi|return on investment|earnings|salary after|worth it|value/.test(l)){
+      var line="Use LP\'s <strong>ROI Calculator</strong> to compare average earnings by major and breakeven time between any two schools.";
+      if(/business|finance/i.test(major)) line+=" For Business/Finance, the ROI gap between a Wharton and a regional business school is significant — worth seeing the real numbers.";
+      if(/stem|engineer/i.test(major)) line+=" Engineering graduates tend to have strong ROI regardless of school — but the top programs have faster career acceleration curves.";
+      return line;
+    }
+    if(/recommendation|letter of rec|teacher rec/.test(l)){
+      var line="Aim for 2 teacher recommendations from subjects where you excelled and have a real relationship with the teacher — not just the class you got an A in.";
+      if(/business|finance/i.test(major)) line+=" A recommendation from an economics, math, or business elective teacher carries weight for business programs.";
+      if(/11th/i.test(grade)) line+=" Ask your junior year teachers before summer — they'll have you fresh in their memory.";
+      if(/12th/i.test(grade)) line+=" If you haven't asked yet, do it this week. Teachers need time to write thoughtfully.";
+      return line;
+    }
+    if(/activities|extracurricular|ec|clubs|sports/.test(l)){
+      var line="Admissions officers want to see depth over breadth — 2-3 activities where you showed real leadership or impact are stronger than 10 surface-level clubs.";
+      if(/business|finance/i.test(major)) line+=" For business programs: DECA, investing clubs, entrepreneurship projects, or any real initiative you started stand out.";
+      if(/health|pre-med/i.test(major)) line+=" For pre-med: clinical volunteering, research, or EMT/CNA certification are the activities that matter most.";
+      if(/9th|10th/i.test(grade)) line+=" You still have time to build something meaningful — start now and let it grow.";
+      return line;
+    }
+
+    // General fallback with profile awareness
+    var fallback="Good question. ";
+    if(major) fallback+="For a student focused on <strong>"+major+"</strong>, I'd ";
+    else fallback+="I'd ";
+    fallback+="start with <strong>College Match</strong> to build a balanced school list";
+    if(hasPrfGPA&&hasPrfSAT) fallback+=", then <strong>Scattergram</strong> to see your real odds at each school.";
+    else fallback+=". What specific school or topic are you wondering about?";
+    return fallback+challengeNudge();
+  }
+
+  function handle(text){
+    if(!text.trim())return;
+    inp.value=''; addUser(text);
+    if(inQA){
+      setTimeout(function(){
+        addBot(qa(text),function(){
+          // personalized quick replies based on profile
+          var qrs=["Penn State SAT range?","Early Decision vs EA?","How does financial aid work?"];
+          if(/business|finance/i.test(profile.major)) qrs=["What's NYU Stern like?","Fordham vs BU for business?","How does financial aid work?"];
+          if(/health|pre-med/i.test(profile.major)) qrs=["Johns Hopkins for pre-med?","What's Emory's acceptance rate?","How does financial aid work?"];
+          if(/stem|engineer/i.test(profile.major)) qrs=["Georgia Tech SAT range?","Carnegie Mellon tuition?","MIT vs Stanford for engineering?"];
+          setReplies(qrs);
+        });
+      },200);
+      return;
+    }
+    // capture profile answer
+    if(step>0&&step<=6) profile[PROF_KEYS[step]]=text;
+    profDone=Math.min(6,profDone+(step>0?1:0));
+    setProgress(profDone);
+    step++;
+    if(step<Q.length){
+      setTimeout(function(){
+        addBot(Q[step].b,function(){setReplies(Q[step].r);});
+      },300);
+    } else {
+      inQA=true;
+      var grade=profile.grade||''; var major=profile.major||''; var challenge=profile.challenge||''; var goal=profile.goal||'';
+      var closing="You\'re all set";
+      if(grade) closing+=" — "+grade;
+      closing+=". LP is now personalized for you.";
+      if(major&&major!=='Not sure yet') closing+=" I\'ll factor in your interest in <strong>"+major+"</strong> on every answer.";
+      closing+=" Ask me anything about schools, admissions, essays, or financial aid.";
+      setTimeout(function(){
+        addBot(closing,function(){
+          var startQRs=["Penn State SAT range?","Early Decision vs EA?","How does financial aid work?","What is Scattergram?"];
+          if(/business|finance/i.test(major)) startQRs=["NYU Stern for business?","Fordham tuition?","Early Decision vs EA?","What is Scattergram?"];
+          if(/health|pre-med/i.test(major)) startQRs=["Johns Hopkins acceptance rate?","Emory for pre-med?","How does financial aid work?","What is Scattergram?"];
+          if(/stem|engineer/i.test(major)) startQRs=["Georgia Tech SAT range?","Carnegie Mellon tuition?","MIT vs Stanford?","What is Scattergram?"];
+          setReplies(startQRs);
+        });
+      },300);
+    }
+  }
+
+  window.lpOpenGuide=function(){
+    overlay.classList.add('open');
+    if(!started){
+      started=true;
+      setTimeout(function(){
+        addBot(Q[0].b,function(){setReplies(Q[0].r);});
+      },300);
+    }
+  };
+
+  window.lpClose=function(){overlay.classList.remove('open');};
+
+  window.lpToggleMin=function(){
+    minimized=!minimized;
+    box.classList.toggle('minimized',minimized);
+    document.getElementById('lpMinBtn').textContent=minimized?'+':'—';
+  };
+
+  // Draggable
+  var dragging=false,offX=0,offY=0;
+  document.getElementById('lpHead').addEventListener('mousedown',function(e){
+    if(e.target.tagName==='BUTTON')return;
+    dragging=true;
+    var r=box.getBoundingClientRect();
+    offX=e.clientX-r.left; offY=e.clientY-r.top;
+    box.style.position='fixed';
+    box.style.right='auto'; box.style.bottom='auto';
+    overlay.style.pointerEvents='none'; box.style.pointerEvents='all';
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!dragging)return;
+    var x=e.clientX-offX, y=e.clientY-offY;
+    x=Math.max(0,Math.min(x,window.innerWidth-box.offsetWidth));
+    y=Math.max(0,Math.min(y,window.innerHeight-box.offsetHeight));
+    box.style.left=x+'px'; box.style.top=y+'px';
+  });
+  document.addEventListener('mouseup',function(){ dragging=false; overlay.style.pointerEvents=''; });
+
+  overlay.addEventListener('click',function(e){if(e.target===overlay)lpClose();});
+  inp.addEventListener('keydown',function(e){if(e.key==='Enter'&&inp.value.trim())handle(inp.value.trim());});
+</body>
+</html>

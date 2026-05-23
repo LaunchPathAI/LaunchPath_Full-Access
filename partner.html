@@ -1,0 +1,2110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>LaunchPath AI — Student Journey Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:#020617;color:#e5e7eb;height:100%;font-family:Inter,system-ui,sans-serif;}
+    #root{height:100vh;display:flex;flex-direction:column;}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+<script type="text/babel">
+
+// animations.jsx
+// Reusable animation starter: Stage, Timeline, Sprite, easing helpers.
+// Usage (in an HTML file that loads React + Babel):
+//
+//   <Stage width={1280} height={720} duration={10} background="#f6f4ef">
+//     <MyScene />
+//   </Stage>
+//
+// Inside <Stage>, any child can call useTime() to read the current
+// playhead (seconds). Or wrap content in <Sprite start={1} end={4}>...</Sprite>
+// to only render during that window -- children receive a `localTime` and
+// `progress` via the useSprite() hook.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Easing functions (hand-rolled, Popmotion-style) ─────────────────────────
+// All easings take t ∈ [0,1] and return eased t ∈ [0,1] (may overshoot for back/elastic).
+const Easing = {
+  linear: (t) => t,
+
+  // Quad
+  easeInQuad:    (t) => t * t,
+  easeOutQuad:   (t) => t * (2 - t),
+  easeInOutQuad: (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
+
+  // Cubic
+  easeInCubic:    (t) => t * t * t,
+  easeOutCubic:   (t) => (--t) * t * t + 1,
+  easeInOutCubic: (t) => (t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1),
+
+  // Quart
+  easeInQuart:    (t) => t * t * t * t,
+  easeOutQuart:   (t) => 1 - (--t) * t * t * t,
+  easeInOutQuart: (t) => (t < 0.5 ? 8 * t * t * t * t : 1 - 8 * (--t) * t * t * t),
+
+  // Expo
+  easeInExpo:  (t) => (t === 0 ? 0 : Math.pow(2, 10 * (t - 1))),
+  easeOutExpo: (t) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t)),
+  easeInOutExpo: (t) => {
+    if (t === 0) return 0;
+    if (t === 1) return 1;
+    if (t < 0.5) return 0.5 * Math.pow(2, 20 * t - 10);
+    return 1 - 0.5 * Math.pow(2, -20 * t + 10);
+  },
+
+  // Sine
+  easeInSine:    (t) => 1 - Math.cos((t * Math.PI) / 2),
+  easeOutSine:   (t) => Math.sin((t * Math.PI) / 2),
+  easeInOutSine: (t) => -(Math.cos(Math.PI * t) - 1) / 2,
+
+  // Back (overshoot)
+  easeOutBack: (t) => {
+    const c1 = 1.70158, c3 = c1 + 1;
+    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+  },
+  easeInBack: (t) => {
+    const c1 = 1.70158, c3 = c1 + 1;
+    return c3 * t * t * t - c1 * t * t;
+  },
+  easeInOutBack: (t) => {
+    const c1 = 1.70158, c2 = c1 * 1.525;
+    return t < 0.5
+      ? (Math.pow(2 * t, 2) * ((c2 + 1) * 2 * t - c2)) / 2
+      : (Math.pow(2 * t - 2, 2) * ((c2 + 1) * (t * 2 - 2) + c2) + 2) / 2;
+  },
+
+  // Elastic
+  easeOutElastic: (t) => {
+    const c4 = (2 * Math.PI) / 3;
+    if (t === 0) return 0;
+    if (t === 1) return 1;
+    return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
+  },
+};
+
+// ── Core interpolation helpers ──────────────────────────────────────────────
+
+// Clamp a value to [min, max]
+const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+// interpolate([0, 0.5, 1], [0, 100, 50], ease?) -> fn(t)
+// Popmotion-style: linearly maps t across input keyframes to output values,
+// with optional easing per segment (single fn or array of fns).
+function interpolate(input, output, ease = Easing.linear) {
+  return (t) => {
+    if (t <= input[0]) return output[0];
+    if (t >= input[input.length - 1]) return output[output.length - 1];
+    for (let i = 0; i < input.length - 1; i++) {
+      if (t >= input[i] && t <= input[i + 1]) {
+        const span = input[i + 1] - input[i];
+        const local = span === 0 ? 0 : (t - input[i]) / span;
+        const easeFn = Array.isArray(ease) ? (ease[i] || Easing.linear) : ease;
+        const eased = easeFn(local);
+        return output[i] + (output[i + 1] - output[i]) * eased;
+      }
+    }
+    return output[output.length - 1];
+  };
+}
+
+// animate({from, to, start, end, ease})(t) — simpler single-segment tween.
+// Returns `from` before `start`, `to` after `end`.
+function animate({ from = 0, to = 1, start = 0, end = 1, ease = Easing.easeInOutCubic }) {
+  return (t) => {
+    if (t <= start) return from;
+    if (t >= end) return to;
+    const local = (t - start) / (end - start);
+    return from + (to - from) * ease(local);
+  };
+}
+
+// ── Timeline context ────────────────────────────────────────────────────────
+
+const TimelineContext = React.createContext({ time: 0, duration: 10, playing: false });
+
+const useTime = () => React.useContext(TimelineContext).time;
+const useTimeline = () => React.useContext(TimelineContext);
+
+// ── Sprite ──────────────────────────────────────────────────────────────────
+// Renders children only when the playhead is inside [start, end]. Provides
+// a sub-context with `localTime` (seconds since start) and `progress` (0..1).
+//
+//   <Sprite start={2} end={5}>
+//     {({ localTime, progress }) => <Thing x={progress * 100} />}
+//   </Sprite>
+//
+// Or as a plain wrapper — children can call useSprite() themselves.
+
+const SpriteContext = React.createContext({ localTime: 0, progress: 0, duration: 0 });
+const useSprite = () => React.useContext(SpriteContext);
+
+function Sprite({ start = 0, end = Infinity, children, keepMounted = false }) {
+  const { time } = useTimeline();
+  const visible = time >= start && time <= end;
+  if (!visible && !keepMounted) return null;
+
+  const duration = end - start;
+  const localTime = Math.max(0, time - start);
+  const progress = duration > 0 && isFinite(duration)
+    ? clamp(localTime / duration, 0, 1)
+    : 0;
+
+  const value = { localTime, progress, duration, visible };
+
+  return (
+    <SpriteContext.Provider value={value}>
+      {typeof children === 'function' ? children(value) : children}
+    </SpriteContext.Provider>
+  );
+}
+
+// ── Sample sprite components ────────────────────────────────────────────────
+
+// TextSprite: fades/slides text in on entry, holds, then fades out on exit.
+// Props: text, x, y, size, color, font, entryDur, exitDur, align
+function TextSprite({
+  text,
+  x = 0, y = 0,
+  size = 48,
+  color = '#111',
+  font = 'Inter, system-ui, sans-serif',
+  weight = 600,
+  entryDur = 0.45,
+  exitDur = 0.35,
+  entryEase = Easing.easeOutBack,
+  exitEase = Easing.easeInCubic,
+  align = 'left',
+  letterSpacing = '-0.01em',
+}) {
+  const { localTime, duration } = useSprite();
+  const exitStart = Math.max(0, duration - exitDur);
+
+  let opacity = 1;
+  let ty = 0;
+
+  if (localTime < entryDur) {
+    const t = entryEase(clamp(localTime / entryDur, 0, 1));
+    opacity = t;
+    ty = (1 - t) * 16;
+  } else if (localTime > exitStart) {
+    const t = exitEase(clamp((localTime - exitStart) / exitDur, 0, 1));
+    opacity = 1 - t;
+    ty = -t * 8;
+  }
+
+  const translateX = align === 'center' ? '-50%' : align === 'right' ? '-100%' : '0';
+
+  return (
+    <div style={{
+      position: 'absolute',
+      left: x, top: y,
+      transform: `translate(${translateX}, ${ty}px)`,
+      opacity,
+      fontFamily: font,
+      fontSize: size,
+      fontWeight: weight,
+      color,
+      letterSpacing,
+      whiteSpace: 'pre',
+      lineHeight: 1.1,
+      willChange: 'transform, opacity',
+    }}>
+      {text}
+    </div>
+  );
+}
+
+// ImageSprite: scales + fades in; optional Ken Burns drift during hold.
+function ImageSprite({
+  src,
+  x = 0, y = 0,
+  width = 400, height = 300,
+  entryDur = 0.6,
+  exitDur = 0.4,
+  kenBurns = false,
+  kenBurnsScale = 1.08,
+  radius = 12,
+  fit = 'cover',
+  placeholder = null, // {label: string} for striped placeholder
+}) {
+  const { localTime, duration } = useSprite();
+  const exitStart = Math.max(0, duration - exitDur);
+
+  let opacity = 1;
+  let scale = 1;
+
+  if (localTime < entryDur) {
+    const t = Easing.easeOutCubic(clamp(localTime / entryDur, 0, 1));
+    opacity = t;
+    scale = 0.96 + 0.04 * t;
+  } else if (localTime > exitStart) {
+    const t = Easing.easeInCubic(clamp((localTime - exitStart) / exitDur, 0, 1));
+    opacity = 1 - t;
+    scale = (kenBurns ? kenBurnsScale : 1) + 0.02 * t;
+  } else if (kenBurns) {
+    const holdSpan = exitStart - entryDur;
+    const holdT = holdSpan > 0 ? (localTime - entryDur) / holdSpan : 0;
+    scale = 1 + (kenBurnsScale - 1) * holdT;
+  }
+
+  const content = placeholder ? (
+    <div style={{
+      width: '100%', height: '100%',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'repeating-linear-gradient(135deg, #e9e6df 0 10px, #dcd8cf 10px 20px)',
+      color: '#6b6458',
+      fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+      fontSize: 13,
+      letterSpacing: '0.04em',
+      textTransform: 'uppercase',
+    }}>
+      {placeholder.label || 'image'}
+    </div>
+  ) : (
+    <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: fit, display: 'block' }} />
+  );
+
+  return (
+    <div style={{
+      position: 'absolute',
+      left: x, top: y,
+      width, height,
+      opacity,
+      transform: `scale(${scale})`,
+      transformOrigin: 'center',
+      borderRadius: radius,
+      overflow: 'hidden',
+      willChange: 'transform, opacity',
+    }}>
+      {content}
+    </div>
+  );
+}
+
+// RectSprite: simple rectangle that animates position/size/color via props.
+// Useful demo primitive — takes a `render` fn for per-frame customization.
+function RectSprite({
+  x = 0, y = 0,
+  width = 100, height = 100,
+  color = '#111',
+  radius = 8,
+  entryDur = 0.4,
+  exitDur = 0.3,
+  render, // optional: (ctx) => style overrides
+}) {
+  const spriteCtx = useSprite();
+  const { localTime, duration } = spriteCtx;
+  const exitStart = Math.max(0, duration - exitDur);
+
+  let opacity = 1;
+  let scale = 1;
+
+  if (localTime < entryDur) {
+    const t = Easing.easeOutBack(clamp(localTime / entryDur, 0, 1));
+    opacity = clamp(localTime / entryDur, 0, 1);
+    scale = 0.4 + 0.6 * t;
+  } else if (localTime > exitStart) {
+    const t = Easing.easeInQuad(clamp((localTime - exitStart) / exitDur, 0, 1));
+    opacity = 1 - t;
+    scale = 1 - 0.15 * t;
+  }
+
+  const overrides = render ? render(spriteCtx) : {};
+
+  return (
+    <div style={{
+      position: 'absolute',
+      left: x, top: y,
+      width, height,
+      background: color,
+      borderRadius: radius,
+      opacity,
+      transform: `scale(${scale})`,
+      transformOrigin: 'center',
+      willChange: 'transform, opacity',
+      ...overrides,
+    }} />
+  );
+}
+
+
+function Stage({
+  width = 1280,
+  height = 720,
+  duration = 10,
+  background = '#f6f4ef',
+  fps = 60,
+  loop = true,
+  autoplay = true,
+  persistKey = 'animstage',
+  children,
+}) {
+  const [time, setTime] = React.useState(0);
+  const [playing, setPlaying] = React.useState(autoplay);
+  const [hoverTime, setHoverTime] = React.useState(null);
+  const [scale, setScale] = React.useState(1);
+
+  const stageRef = React.useRef(null);
+  const canvasRef = React.useRef(null);
+  const rafRef = React.useRef(null);
+  const lastTsRef = React.useRef(null);
+
+  // Persist playhead
+  React.useEffect(() => {
+    try { localStorage.setItem(persistKey + ':t', String(time)); } catch {}
+  }, [time, persistKey]);
+
+  // Auto-scale to fit viewport
+  React.useEffect(() => {
+    if (!stageRef.current) return;
+    const el = stageRef.current;
+    const measure = () => {
+      const barH = 44; // playback bar height
+      const s = Math.min(
+        el.clientWidth / width,
+        (el.clientHeight - barH) / height
+      );
+      setScale(Math.max(0.05, s));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [width, height]);
+
+  // Animation loop
+  React.useEffect(() => {
+    if (!playing) {
+      lastTsRef.current = null;
+      return;
+    }
+    const step = (ts) => {
+      if (lastTsRef.current == null) lastTsRef.current = ts;
+      const dt = (ts - lastTsRef.current) / 1000;
+      lastTsRef.current = ts;
+      setTime((t) => {
+        let next = t + dt;
+        if (next >= duration) {
+          if (loop) next = next % duration;
+          else { next = duration; setPlaying(false); }
+        }
+        return next;
+      });
+      rafRef.current = requestAnimationFrame(step);
+    };
+    rafRef.current = requestAnimationFrame(step);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      lastTsRef.current = null;
+    };
+  }, [playing, duration, loop]);
+
+  // Keyboard: space = play/pause, ← → = seek
+  React.useEffect(() => {
+    const onKey = (e) => {
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        setPlaying(p => !p);
+      } else if (e.code === 'ArrowLeft') {
+        setTime(t => clamp(t - (e.shiftKey ? 1 : 0.1), 0, duration));
+      } else if (e.code === 'ArrowRight') {
+        setTime(t => clamp(t + (e.shiftKey ? 1 : 0.1), 0, duration));
+      } else if (e.key === '0' || e.code === 'Home') {
+        setTime(0);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [duration]);
+
+  const displayTime = hoverTime != null ? hoverTime : time;
+
+  const ctxValue = React.useMemo(
+    () => ({ time: displayTime, duration, playing, setTime, setPlaying }),
+    [displayTime, duration, playing]
+  );
+
+  return (
+    <div
+      ref={stageRef}
+      style={{
+        position: 'absolute', inset: 0,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center',
+        background: '#0a0a0a',
+        fontFamily: 'Inter, system-ui, sans-serif',
+      }}
+    >
+      {/* Canvas area — vertically centered in remaining space */}
+      <div style={{
+        flex: 1,
+        width: '100%',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden',
+        minHeight: 0,
+      }}>
+        <div
+          ref={canvasRef}
+          style={{
+            width, height,
+            background,
+            position: 'relative',
+            transform: `scale(${scale})`,
+            transformOrigin: 'center',
+            flexShrink: 0,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+            overflow: 'hidden',
+          }}
+        >
+          <TimelineContext.Provider value={ctxValue}>
+            {children}
+          </TimelineContext.Provider>
+        </div>
+      </div>
+
+      {/* Playback bar — stacked below canvas, never overlapping */}
+      <PlaybackBar
+        time={displayTime}
+        actualTime={time}
+        duration={duration}
+        playing={playing}
+        onPlayPause={() => setPlaying(p => !p)}
+        onReset={() => { setTime(0); }}
+        onSeek={(t) => setTime(t)}
+        onHover={(t) => setHoverTime(t)}
+      />
+    </div>
+  );
+}
+
+// ── Playback bar ────────────────────────────────────────────────────────────
+// Play/pause, return-to-begin, scrub track, time display.
+// Uses fixed-width time fields so layout doesn't thrash.
+
+function PlaybackBar({ time, duration, playing, onPlayPause, onReset, onSeek, onHover }) {
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+
+  const timeFromEvent = React.useCallback((e) => {
+    const rect = trackRef.current.getBoundingClientRect();
+    const x = clamp((e.clientX - rect.left) / rect.width, 0, 1);
+    return x * duration;
+  }, [duration]);
+
+  const onTrackMove = (e) => {
+    if (!trackRef.current) return;
+    const t = timeFromEvent(e);
+    if (dragging) {
+      onSeek(t);
+    } else {
+      onHover(t);
+    }
+  };
+
+  const onTrackLeave = () => {
+    if (!dragging) onHover(null);
+  };
+
+  const onTrackDown = (e) => {
+    setDragging(true);
+    const t = timeFromEvent(e);
+    onSeek(t);
+    onHover(null);
+  };
+
+  React.useEffect(() => {
+    if (!dragging) return;
+    const onUp = () => setDragging(false);
+    const onMove = (e) => {
+      if (!trackRef.current) return;
+      const t = timeFromEvent(e);
+      onSeek(t);
+    };
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('mousemove', onMove);
+    return () => {
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('mousemove', onMove);
+    };
+  }, [dragging, timeFromEvent, onSeek]);
+
+  const pct = duration > 0 ? (time / duration) * 100 : 0;
+  const fmt = (t) => {
+    const total = Math.max(0, t);
+    const m = Math.floor(total / 60);
+    const s = Math.floor(total % 60);
+    const cs = Math.floor((total * 100) % 100);
+    return `${String(m).padStart(1, '0')}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
+  };
+
+  const mono = 'JetBrains Mono, ui-monospace, SFMono-Regular, monospace';
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '8px 16px',
+      background: 'rgba(20,20,20,0.92)',
+      borderTop: '1px solid rgba(255,255,255,0.08)',
+      width: '100%',
+      maxWidth: 680,
+      alignSelf: 'center',
+
+      borderRadius: 8,
+      color: '#f6f4ef',
+      fontFamily: 'Inter, system-ui, sans-serif',
+      userSelect: 'none',
+      flexShrink: 0,
+    }}>
+      <IconButton onClick={onReset} title="Return to start (0)">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M3 2v10M12 2L5 7l7 5V2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"/>
+        </svg>
+      </IconButton>
+      <IconButton onClick={onPlayPause} title="Play/pause (space)">
+        {playing ? (
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <rect x="3" y="2" width="3" height="10" fill="currentColor"/>
+            <rect x="8" y="2" width="3" height="10" fill="currentColor"/>
+          </svg>
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M3 2l9 5-9 5V2z" fill="currentColor"/>
+          </svg>
+        )}
+      </IconButton>
+
+      {/* Current time: fixed width so it doesn't thrash */}
+      <div style={{
+        fontFamily: mono,
+        fontSize: 12,
+        fontVariantNumeric: 'tabular-nums',
+        width: 64, textAlign: 'right',
+        color: '#f6f4ef',
+      }}>
+        {fmt(time)}
+      </div>
+
+      {/* Scrub track */}
+      <div
+        ref={trackRef}
+        onMouseMove={onTrackMove}
+        onMouseLeave={onTrackLeave}
+        onMouseDown={onTrackDown}
+        style={{
+          flex: 1,
+          height: 22,
+          position: 'relative',
+          cursor: 'pointer',
+          display: 'flex', alignItems: 'center',
+        }}
+      >
+        <div style={{
+          position: 'absolute',
+          left: 0, right: 0, height: 4,
+          background: 'rgba(255,255,255,0.12)',
+          borderRadius: 2,
+        }}/>
+        <div style={{
+          position: 'absolute',
+          left: 0, width: `${pct}%`, height: 4,
+          background: 'oklch(72% 0.12 250)',
+          borderRadius: 2,
+        }}/>
+        <div style={{
+          position: 'absolute',
+          left: `${pct}%`, top: '50%',
+          width: 12, height: 12,
+          marginLeft: -6, marginTop: -6,
+          background: '#fff',
+          borderRadius: 6,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.4)',
+        }}/>
+      </div>
+
+      {/* Duration: fixed width */}
+      <div style={{
+        fontFamily: mono,
+        fontSize: 12,
+        fontVariantNumeric: 'tabular-nums',
+        width: 64, textAlign: 'left',
+        color: 'rgba(246,244,239,0.55)',
+      }}>
+        {fmt(duration)}
+      </div>
+    </div>
+  );
+}
+
+function IconButton({ children, onClick, title }) {
+  const [hover, setHover] = React.useState(false);
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        width: 28, height: 28,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: hover ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: 6,
+        color: '#f6f4ef',
+        cursor: 'pointer',
+        padding: 0,
+        transition: 'background 120ms',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+
+Object.assign(window, {
+  Easing, interpolate, animate, clamp,
+  TimelineContext, useTime, useTimeline,
+  Sprite, SpriteContext, useSprite,
+  TextSprite, ImageSprite, RectSprite,
+  Stage, PlaybackBar,
+});
+
+</script>
+<script type="text/babel">
+/* global React */
+const { useTime, useSprite, useTimeline, Easing, interpolate, animate, clamp, Stage, Sprite } = window;
+
+/* ============================================================
+   75-second LaunchPath AI student journey video
+   Sophomore (cyan) → Junior (amber) → Senior Fall (rose) → Senior Spring (cyan/green)
+   ============================================================ */
+
+const STAGE_W = 1280;
+const STAGE_H = 720;
+
+/* ---------- shared ---------- */
+
+const Bg = ({ from, to, accent }) => {
+  return (
+    <div style={{
+      position: "absolute", inset: 0,
+      background: `
+        radial-gradient(circle at 20% 20%, ${accent}22, transparent 40%),
+        radial-gradient(circle at 80% 80%, ${accent}18, transparent 45%),
+        linear-gradient(180deg, ${from}, ${to})`,
+    }} />
+  );
+};
+
+const Stars = () => {
+  const arr = React.useMemo(() => Array.from({length: 60}).map((_,i) => ({
+    x: (i * 137.5) % 100, y: (i * 53.7) % 100, s: 1 + (i % 3), d: (i % 5) * 0.4,
+  })), []);
+  const t = useTime();
+  return (
+    <svg width={STAGE_W} height={STAGE_H} style={{position:"absolute",inset:0,pointerEvents:"none"}}>
+      {arr.map((s,i) => {
+        const tw = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(t*1.5 + s.d*4));
+        return <circle key={i} cx={s.x*STAGE_W/100} cy={s.y*STAGE_H/100} r={s.s*0.6} fill="#bae6fd" opacity={tw*0.5}/>;
+      })}
+    </svg>
+  );
+};
+
+const Eyebrow = ({ text, color = "#a5f3fc" }) => (
+  <div style={{
+    display:"inline-flex",alignItems:"center",gap:10,
+    padding:"8px 18px",borderRadius:999,
+    border:`1px solid ${color}55`, background:`${color}12`,
+    color, fontSize:14, fontWeight:700, letterSpacing:".2em", textTransform:"uppercase",
+    fontFamily:"Inter, system-ui, sans-serif",
+  }}>
+    <span style={{width:6,height:6,borderRadius:"50%",background:color,boxShadow:`0 0 12px ${color}`}}/>
+    {text}
+  </div>
+);
+
+const Orb = ({ size = 60, accent = "#38bdf8", glow = 1 }) => (
+  <div style={{
+    width:size, height:size, borderRadius:"50%",
+    background:`radial-gradient(circle at 30% 25%, #fff, ${accent} 60%, #0f172a)`,
+    boxShadow:`0 0 ${30*glow}px ${accent}cc, 0 0 ${60*glow}px ${accent}66`,
+    border:"1px solid rgba(255,255,255,.3)",
+  }}/>
+);
+
+/* ============================================================
+   SCENE 1: COLD OPEN (0-8s)
+   ============================================================ */
+
+function SceneOpen() {
+  const { progress, localTime } = useSprite();
+  const orbScale = animate({from:0.4,to:1,start:0,end:1.2,ease:Easing.easeOutBack})(localTime);
+  // Phase 1 (0-5s): title. Phase 2 (5-10s): one-stop shop statement.
+  const titleY = interpolate([1.5, 2.5],[40,0],Easing.easeOutCubic)(localTime);
+  const titleOp = interpolate([1.5,2.5,4.5,5.5],[0,1,1,0])(localTime);
+  const subOp = interpolate([2.8,3.8,4.5,5.5],[0,1,1,0])(localTime);
+
+  // One-Stop Shop callout (5-12s)
+  const osOp = interpolate([5.5,6.5,11.5,12],[0,1,1,0])(localTime);
+  const osY = interpolate([5.5,6.5],[20,0],Easing.easeOutCubic)(localTime);
+  // staggered word reveals
+  const wordReveal = (start) => clamp((localTime - start) * 2.5, 0, 1);
+
+  return (
+    <>
+      <Bg from="#020617" to="#0b1120" accent="#38bdf8"/>
+      <Stars/>
+      {/* central orb */}
+      <div style={{position:"absolute",left:"50%",top:"35%",transform:`translate(-50%,-50%) scale(${orbScale})`}}>
+        <Orb size={100} accent="#38bdf8" glow={1.5}/>
+      </div>
+      {/* rings */}
+      {[1,2,3].map(r => {
+        const ringOp = interpolate([0.5+r*0.2, 1.5+r*0.2, 9.5, 10],[0,0.4,0.4,0])(localTime);
+        const ringScale = 1 + r*0.6 + Math.sin(localTime*1.2+r)*0.04;
+        return <div key={r} style={{
+          position:"absolute",left:"50%",top:"35%",
+          width:100,height:100,borderRadius:"50%",
+          border:"1px solid #38bdf8",opacity:ringOp,
+          transform:`translate(-50%,-50%) scale(${ringScale})`,
+        }}/>;
+      })}
+      {/* PHASE 1 — title */}
+      <div style={{
+        position:"absolute",left:"50%",top:"55%",transform:`translate(-50%,${titleY}px)`,
+        opacity:titleOp, textAlign:"center", width:"80%",
+      }}>
+        <h1 style={{
+          margin:0,fontSize:64,fontWeight:800,letterSpacing:"-.04em",
+          color:"#f8fafc",fontFamily:"Inter, system-ui",lineHeight:1.05,
+        }}>The partner of choice<br/><span style={{
+          background:"linear-gradient(90deg,#7dd3fc,#38bdf8 50%,#a78bfa)",
+          WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",
+        }}>for SAT prep centers.</span></h1>
+      </div>
+      <div style={{
+        position:"absolute",left:"50%",top:"78%",transform:"translateX(-50%)",
+        opacity:subOp, fontSize:16, color:"#94a3b8",letterSpacing:".18em",textTransform:"uppercase",fontWeight:600,
+        fontFamily:"Inter, system-ui",
+      }}>Strategic Partnership · Elite Enterprise Program</div>
+
+      {/* PHASE 2 — One-Stop Shop statement */}
+      <div style={{
+        position:"absolute",left:"50%",top:"58%",transform:`translate(-50%,${osY}px)`,
+        opacity:osOp, textAlign:"center", width:"86%", maxWidth:1100,
+      }}>
+        <div style={{
+          display:"inline-flex",alignItems:"center",gap:10,
+          padding:"7px 18px",borderRadius:999,
+          border:"1px solid #38bdf855", background:"#38bdf812",
+          color:"#a5f3fc", fontSize:13, fontWeight:700, letterSpacing:".22em", textTransform:"uppercase",
+          fontFamily:"Inter", marginBottom:24,
+        }}>
+          <span style={{width:6,height:6,borderRadius:"50%",background:"#38bdf8",boxShadow:"0 0 12px #38bdf8"}}/>
+          The Vision
+        </div>
+        <p style={{
+          margin:0,fontSize:36,fontWeight:600,lineHeight:1.32,letterSpacing:"-.015em",
+          color:"#f8fafc",fontFamily:"Inter",textWrap:"pretty",
+        }}>
+          <span style={{opacity:wordReveal(6.0)}}>SAT centers partner with LaunchPath to become the </span>
+          <span style={{
+            opacity:wordReveal(6.6),
+            background:"linear-gradient(90deg,#7dd3fc,#38bdf8 60%,#a78bfa)",
+            WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",
+            fontWeight:800,
+          }}>One-Stop Shop</span>
+          <span style={{opacity:wordReveal(7.2)}}> every family needs — the </span>
+          <span style={{
+            opacity:wordReveal(7.8),
+            background:"linear-gradient(90deg,#7dd3fc,#38bdf8 60%,#a78bfa)",
+            WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",
+            fontWeight:800,
+          }}>default guidance system</span>
+          <span style={{opacity:wordReveal(8.4)}}> from sophomore year through acceptance.</span>
+        </p>
+      </div>
+    </>
+  );
+}
+
+/* ============================================================
+   SCENE 7: MODERN MATRIX (after Senior Spring)
+   ============================================================ */
+
+function SceneMatrix() {
+  const { localTime } = useSprite();
+  const headOp = interpolate([0,0.6,11.5,12],[0,1,1,0])(localTime);
+  const tableOp = interpolate([0.8,1.5,11.5,12],[0,1,1,0])(localTime);
+
+  const cols = [
+    { id:"lp",  name:"LaunchPath AI",   tag:"Your platform",  hl:true  },
+    { id:"nav", name:"Naviance",        tag:"School tool",    hl:false },
+    { id:"sc",  name:"Scoir",           tag:"School tool",    hl:false },
+    { id:"cm",  name:"CounselMore",     tag:"Counselor SaaS", hl:false },
+  ];
+  const rows = [
+    { f:"AI essay coaching",       lp:"full", nav:"none",    sc:"limited", cm:"none" },
+    { f:"Live admissions data",    lp:"full", nav:"limited", sc:"limited", cm:"limited" },
+    { f:"Partner traffic-light dash", lp:"full", nav:"none", sc:"limited", cm:"limited" },
+    { f:"Social Branding",         lp:"exclusive", nav:"none", sc:"none", cm:"none" },
+    { f:"Passive Revenue Share",   lp:"exclusive", nav:"none", sc:"none", cm:"none" },
+  ];
+
+  const cellRender = (k, isLP) => {
+    if (k === "exclusive") return { txt:"★ Exclusive", bg:"linear-gradient(90deg,#38bdf855,#a78bfa55)", bd:"#38bdf8", c:"#fff", glow:"0 0 18px #38bdf877" };
+    if (k === "full") return { txt:"✓ Included", bg:isLP?"#38bdf826":"#94a3b81a", bd:isLP?"#38bdf877":"#94a3b833", c:isLP?"#fff":"#cbd5e1", glow:isLP?"0 0 12px #38bdf833":"none" };
+    if (k === "limited") return { txt:"~ Limited", bg:"#fbbf241a", bd:"#fbbf2444", c:"#fbbf24", glow:"none" };
+    return { txt:"— Not offered", bg:"#64748b15", bd:"#64748b33", c:"#64748b", glow:"none" };
+  };
+
+  return (
+    <>
+      <Bg from="#020617" to="#0b1120" accent="#38bdf8"/>
+      <Stars/>
+      <div style={{position:"absolute",left:80,top:50,opacity:headOp}}>
+        <Eyebrow text="The Modern Matrix" color="#38bdf8"/>
+        <h2 style={{margin:"14px 0 0",fontSize:38,fontWeight:800,color:"#f8fafc",fontFamily:"Inter",letterSpacing:"-.03em",lineHeight:1.05,maxWidth:1000}}>
+          One platform built for partners. <span style={{color:"#38bdf8"}}>Three built for schools.</span>
+        </h2>
+      </div>
+
+      {/* Glassmorphism table */}
+      <div style={{
+        position:"absolute",left:80,right:80,top:200,opacity:tableOp,
+        padding:1,borderRadius:20,
+        background:"linear-gradient(135deg,#38bdf877,#38bdf80a 35%,#a78bfa44 70%,#38bdf866)",
+        boxShadow:"0 30px 60px rgba(0,0,0,.4)",
+      }}>
+        <div style={{
+          padding:8,borderRadius:19,
+          background:"rgba(15,23,42,.55)",
+          backdropFilter:"blur(22px) saturate(140%)",
+          WebkitBackdropFilter:"blur(22px) saturate(140%)",
+          position:"relative",
+        }}>
+          {/* LP highlight spine */}
+          <div style={{
+            position:"absolute",top:8,bottom:8,
+            left:"calc(28% + 8px)",width:"calc(18% - 8px)",
+            borderRadius:14,
+            background:"linear-gradient(180deg,rgba(56,189,248,.10),rgba(56,189,248,.02))",
+            border:"1px solid rgba(56,189,248,.35)",
+            boxShadow:"0 0 30px rgba(56,189,248,.20),inset 0 1px 0 rgba(255,255,255,.06)",
+            pointerEvents:"none",
+          }}/>
+
+          {/* Header row */}
+          <div style={{
+            display:"grid",gridTemplateColumns:"28% 18% 18% 18% 18%",
+            padding:"16px 12px",
+            background:"rgba(15,23,42,.5)",borderRadius:14,marginBottom:6,
+            border:"1px solid rgba(148,163,184,.10)",
+          }}>
+            <div style={{fontSize:11,letterSpacing:".14em",textTransform:"uppercase",color:"#94a3b8",fontWeight:700,fontFamily:"Inter",alignSelf:"center",paddingLeft:10}}>Capability</div>
+            {cols.map(c => (
+              <div key={c.id} style={{textAlign:"center",position:"relative"}}>
+                {c.hl && <div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",width:48,height:5,borderRadius:999,background:"linear-gradient(90deg,transparent,#38bdf8,transparent)",boxShadow:"0 0 14px #38bdf899"}}/>}
+                <div style={{fontSize:16,fontWeight:800,color:c.hl?"#38bdf8":"#f8fafc",fontFamily:"Inter",letterSpacing:".005em",textShadow:c.hl?"0 0 18px #38bdf877":"none"}}>{c.name}</div>
+                <div style={{fontSize:10,color:c.hl?"#a5f3fc":"#94a3b8",letterSpacing:".06em",textTransform:"uppercase",marginTop:2,fontFamily:"Inter"}}>{c.tag}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Data rows */}
+          {rows.map((r,i) => {
+            const rowOp = clamp((localTime - 1.6 - i*0.25)*2, 0, 1);
+            const rowY = (1-rowOp)*10;
+            const isExcl = r.lp === "exclusive";
+            return (
+              <div key={i} style={{
+                opacity:rowOp,transform:`translateY(${rowY}px)`,
+                display:"grid",gridTemplateColumns:"28% 18% 18% 18% 18%",
+                padding:"14px 12px",borderRadius:14,marginBottom:4,
+                background:isExcl?"linear-gradient(90deg,rgba(56,189,248,.08),rgba(167,139,250,.06))":"transparent",
+                border:isExcl?"1px solid rgba(56,189,248,.25)":"1px solid transparent",
+                position:"relative",zIndex:1,
+              }}>
+                <div style={{fontSize:14,color:"#f3f4f6",fontWeight:600,fontFamily:"Inter",alignSelf:"center",paddingLeft:10}}>{r.f}</div>
+                {["lp","nav","sc","cm"].map((k,j) => {
+                  const v = cellRender(r[k], k==="lp");
+                  return (
+                    <div key={j} style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <div style={{
+                        padding:"7px 14px",borderRadius:999,
+                        background:v.bg,border:`1px solid ${v.bd}`,
+                        color:v.c,fontSize:11,fontWeight:700,fontFamily:"Inter",
+                        boxShadow:v.glow,letterSpacing:".01em",
+                      }}>{v.txt}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Bottom callout */}
+      <div style={{position:"absolute",left:80,right:80,bottom:55,opacity:tableOp,textAlign:"center"}}>
+        <p style={{margin:0,fontSize:16,color:"#cbd5e1",fontFamily:"Inter",fontWeight:500}}>
+          <span style={{color:"#38bdf8",fontWeight:800}}>Social Branding</span> and <span style={{color:"#38bdf8",fontWeight:800}}>Passive Revenue Share</span> — exclusive to LaunchPath partners.
+        </p>
+      </div>
+    </>
+  );
+}
+
+/* ============================================================
+   SCENE 8: GROWTH SLIDER (no dollars; 3 Impact Meters)
+   ============================================================ */
+
+function SceneSlider() {
+  const { localTime } = useSprite();
+  const headOp = interpolate([0,0.6,15.5,16],[0,1,1,0])(localTime);
+  const sliderOp = interpolate([0.8,1.5,15.5,16],[0,1,1,0])(localTime);
+
+  // Animated student volume sweep: 50 → 500 (now over 11s instead of 7s)
+  const vol = Math.round(animate({from:50,to:500,start:1.5,end:12.5,ease:Easing.easeInOutCubic})(localTime));
+  const sliderPct = ((vol - 50) / 450) * 100;
+
+  // Tier
+  const tier = vol < 100 ? {name:"Affiliate",c:"#64748b"} :
+               vol < 200 ? {name:"Authorized",c:"#38bdf8"} :
+               vol < 350 ? {name:"Premier",c:"#22d3ee"} :
+                           {name:"Flagship",c:"#a78bfa"};
+
+  // Meter values
+  const retention = Math.min(96, 32 + Math.pow((vol-50)/450, 0.62) * 64);
+  const referrals = Math.round(2 + Math.pow((vol-50)/450, 1.15) * 78);
+  const tierProg  = Math.min(100, ((vol-50)/450)*100);
+
+  const meters = [
+    { label:"Retention through senior year", value:retention, max:100, suffix:"%", c:"#22d3ee" },
+    { label:"Viral referrals / month",        value:referrals, max:80,  suffix:"",  c:"#38bdf8" },
+    { label:"Partner tier progress",          value:tierProg,  max:100, suffix:"%", c:tier.c   },
+  ];
+
+  return (
+    <>
+      <Bg from="#020617" to="#0b1120" accent="#38bdf8"/>
+      <Stars/>
+      <div style={{position:"absolute",left:80,top:50,opacity:headOp}}>
+        <Eyebrow text="Partnership Modeling — Volume Impact" color="#38bdf8"/>
+        <h2 style={{margin:"14px 0 0",fontSize:38,fontWeight:800,color:"#f8fafc",fontFamily:"Inter",letterSpacing:"-.03em",lineHeight:1.05,maxWidth:1000}}>
+          Move the dial. <span style={{color:"#38bdf8"}}>Watch the partnership compound.</span>
+        </h2>
+      </div>
+
+      {/* Slider card */}
+      <div style={{
+        position:"absolute",left:80,top:210,width:520,opacity:sliderOp,
+        padding:"32px 32px 28px",borderRadius:18,
+        background:"radial-gradient(circle at 30% 0%,rgba(56,189,248,.14),transparent 60%),rgba(15,23,42,.72)",
+        border:"1px solid rgba(56,189,248,.22)",
+      }}>
+        <div style={{fontSize:11,letterSpacing:".14em",textTransform:"uppercase",color:"#94a3b8",fontFamily:"Inter",fontWeight:700}}>Active Students</div>
+        <div style={{
+          fontSize:96,fontWeight:800,letterSpacing:"-.05em",lineHeight:1,fontFamily:"Inter",
+          color:tier.c,textShadow:`0 0 30px ${tier.c}66`,fontVariantNumeric:"tabular-nums",marginTop:4,
+        }}>{vol}</div>
+        <div style={{fontSize:13,color:"#94a3b8",fontFamily:"Inter",marginBottom:24}}>students / cohort</div>
+
+        {/* Slider track */}
+        <div style={{
+          position:"relative",height:8,borderRadius:999,
+          background:`linear-gradient(90deg,${tier.c} 0%,${tier.c} ${sliderPct}%,rgba(148,163,184,.18) ${sliderPct}%,rgba(148,163,184,.18) 100%)`,
+        }}>
+          {/* Thumb */}
+          <div style={{
+            position:"absolute",left:`${sliderPct}%`,top:"50%",transform:"translate(-50%,-50%)",
+            width:24,height:24,borderRadius:"50%",
+            background:`radial-gradient(circle at 35% 30%,#fff,${tier.c} 70%)`,
+            border:"2px solid #fff",
+            boxShadow:`0 0 0 4px rgba(15,23,42,.7),0 0 18px ${tier.c},0 0 38px ${tier.c}88`,
+          }}/>
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#94a3b8",marginTop:10,fontFamily:"Inter",fontVariantNumeric:"tabular-nums",letterSpacing:".04em"}}>
+          <span>50</span><span>150</span><span>275</span><span>400</span><span>500</span>
+        </div>
+
+        {/* Tier badge */}
+        <div style={{
+          marginTop:24,display:"flex",alignItems:"center",gap:10,
+          padding:"14px 16px",borderRadius:14,
+          background:"rgba(15,23,42,.78)",border:`1px solid ${tier.c}`,
+          boxShadow:`0 0 0 4px rgba(15,23,42,.5),0 0 24px ${tier.c}88`,
+        }}>
+          <div style={{width:10,height:10,borderRadius:"50%",background:tier.c,boxShadow:`0 0 12px ${tier.c}`}}/>
+          <span style={{fontSize:11,letterSpacing:".14em",textTransform:"uppercase",color:"#94a3b8",fontFamily:"Inter",fontWeight:700}}>Partner Tier</span>
+          <span style={{marginLeft:"auto",fontSize:18,fontWeight:800,color:"#fff",fontFamily:"Inter"}}>{tier.name}</span>
+        </div>
+      </div>
+
+      {/* Three Impact Meters */}
+      <div style={{position:"absolute",right:80,top:210,width:520,opacity:sliderOp,display:"flex",flexDirection:"column",gap:16}}>
+        {meters.map((m,i) => {
+          const pct = Math.max(0, Math.min(100, (m.value/m.max)*100));
+          return (
+            <div key={i} style={{
+              padding:"20px 22px",borderRadius:16,
+              background:"linear-gradient(180deg,rgba(15,23,42,.88),rgba(11,18,32,.88))",
+              border:"1px solid rgba(148,163,184,.12)",
+              position:"relative",overflow:"hidden",
+              boxShadow:`inset 0 0 0 1px ${m.c}33`,
+            }}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:14}}>
+                <span style={{fontSize:13,color:"#cbd5e1",fontFamily:"Inter",fontWeight:600}}>{m.label}</span>
+                <span style={{fontSize:24,fontWeight:800,color:m.c,fontFamily:"Inter",fontVariantNumeric:"tabular-nums",textShadow:`0 0 18px ${m.c}66`}}>
+                  {Math.round(m.value)}{m.suffix}
+                </span>
+              </div>
+              {/* Track */}
+              <div style={{position:"relative",height:10,borderRadius:999,background:"rgba(148,163,184,.10)",overflow:"hidden",border:"1px solid rgba(148,163,184,.08)"}}>
+                <div style={{
+                  position:"absolute",left:0,top:0,bottom:0,width:`${pct}%`,
+                  background:`linear-gradient(90deg,${m.c},${m.c}cc)`,
+                  borderRadius:999,
+                  boxShadow:`0 0 16px ${m.c}aa`,
+                }}/>
+              </div>
+              {/* Ticks */}
+              <div style={{position:"relative",height:8,marginTop:6}}>
+                {[0,25,50,75,100].map(t => (
+                  <span key={t} style={{position:"absolute",top:0,left:`${t}%`,width:1,height:6,background:m.c,opacity:pct>=t?1:.25,transform:"translateX(-50%)"}}/>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Note: no dollars */}
+      <div style={{position:"absolute",left:80,right:80,bottom:55,opacity:sliderOp,textAlign:"center",fontSize:13,color:"#64748b",fontFamily:"Inter",letterSpacing:".06em"}}>
+        Volume drives retention, viral referrals, and partner tier — revenue covered privately during your demo.
+      </div>
+    </>
+  );
+}
+
+/* ============================================================
+   SCENE 2: SOPHOMORE — DISCOVERY (8-22s)
+   ============================================================ */
+
+function ScatterPlot() {
+  const { localTime } = useSprite();
+  const dots = React.useMemo(() => Array.from({length:42}).map((_,i)=>({
+    x: 60 + ((i*73)%280), y: 40 + ((i*97)%180), kind: i%5===0?"you":i%3===0?"admit":"deny", d:i*0.05,
+  })),[]);
+  return (
+    <svg width={380} height={260} style={{position:"absolute",left:0,top:0}}>
+      <rect x="0" y="0" width="380" height="260" rx="14" fill="#0f172aee" stroke="#38bdf855"/>
+      {/* axes */}
+      <line x1="50" y1="220" x2="360" y2="220" stroke="#334155" strokeWidth="1"/>
+      <line x1="50" y1="30" x2="50" y2="220" stroke="#334155" strokeWidth="1"/>
+      <text x="60" y="22" fill="#94a3b8" fontSize="10" fontFamily="Inter">SAT</text>
+      <text x="350" y="240" fill="#94a3b8" fontSize="10" fontFamily="Inter" textAnchor="end">GPA</text>
+      {dots.map((d,i)=>{
+        const op = clamp((localTime - 1 - d.d)*1.2, 0, 1);
+        const fill = d.kind==="you"?"#38bdf8":d.kind==="admit"?"#22c55e":"#ef4444";
+        const r = d.kind==="you" ? 6 : 3;
+        return <circle key={i} cx={d.x} cy={d.y} r={r*op} fill={fill} opacity={op*(d.kind==="you"?1:0.7)}>
+          {d.kind==="you" && <animate attributeName="r" values={`${r};${r*1.4};${r}`} dur="1.5s" repeatCount="indefinite"/>}
+        </circle>;
+      })}
+      <text x="190" y="260" fill="#cbd5e1" fontSize="11" fontFamily="Inter" textAnchor="middle" fontWeight="600">Princeton · Scattergram</text>
+    </svg>
+  );
+}
+
+// LP scattergram preview — clean stylized version
+function LPScattergramTile({ t, delay }) {
+  const op = clamp((t - delay)*2, 0, 1);
+  const y = (1-op)*14;
+  const W = 360, H = 200;
+  // synthetic admit/deny dots
+  const dots = [];
+  const seed = (i) => Math.sin(i*12.9898)*43758.5453 % 1;
+  for (let i = 0; i < 60; i++) {
+    const r1 = Math.abs(seed(i)*1)%1;
+    const r2 = Math.abs(seed(i+99)*1)%1;
+    const x = 30 + r1 * (W - 60);
+    const sat = 1200 + r1 * 400;
+    const gpa = 3.0 + r2 * 1.2 - (1400-sat)*0.0003;
+    const yy = H - 30 - (gpa - 3.0) / 1.2 * (H - 60);
+    const admit = sat > 1340 && gpa > 3.6 ? r1 > 0.25 : r1 > 0.7;
+    const reveal = clamp((t - delay - 0.4 - i*0.015)*4, 0, 1);
+    dots.push({x, y:yy, admit, op:reveal});
+  }
+  // student "you are here" marker animates in last
+  const meX = 30 + 0.62 * (W - 60);
+  const meY = H - 30 - 0.55 * (H - 60);
+  const meOp = clamp((t - delay - 1.8)*2, 0, 1);
+  const mePulse = 1 + 0.25*Math.sin(t*4);
+  return (
+    <div style={{
+      opacity:op, transform:`translateY(${y}px)`,
+      background:"#1a2332", border:"1px solid #3a4b65", borderRadius:18, padding:14,
+    }}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+        <div>
+          <div style={{fontSize:11,letterSpacing:".18em",color:"#94a3b8",textTransform:"uppercase",fontWeight:700,fontFamily:"Inter"}}>Scattergram preview</div>
+          <div style={{fontSize:14,fontWeight:600,color:"#f3f4f6",fontFamily:"Inter"}}>Vanderbilt · Class of 2028</div>
+        </div>
+        <div style={{padding:"3px 8px",borderRadius:999,border:"1px solid #facc1580",color:"#facc15",background:"#facc1518",fontSize:10,fontFamily:"Inter",fontWeight:700}}>TARGET</div>
+      </div>
+      <svg width={W} height={H} style={{display:"block"}}>
+        <rect x="0" y="0" width={W} height={H} rx="12" fill="#020617"/>
+        {/* axis */}
+        <line x1="30" y1={H-30} x2={W-15} y2={H-30} stroke="#334155" strokeWidth="1"/>
+        <line x1="30" y1="15" x2="30" y2={H-30} stroke="#334155" strokeWidth="1"/>
+        {/* admit band shading */}
+        <rect x="180" y="20" width={W-195} height="100" fill="#22c55e" opacity="0.06" rx="6"/>
+        {/* dots */}
+        {dots.map((d,i)=>(
+          <circle key={i} cx={d.x} cy={d.y} r="3.5" opacity={d.op*0.85}
+            fill={d.admit ? "#22c55e" : "#fb7185"}/>
+        ))}
+        {/* "you" marker */}
+        <g opacity={meOp} transform={`translate(${meX} ${meY}) scale(${mePulse})`}>
+          <circle r="14" fill="#22d3ee" opacity="0.18"/>
+          <circle r="6" fill="#22d3ee" stroke="#0ea5e9" strokeWidth="2"/>
+        </g>
+        {/* axis labels */}
+        <text x="30" y={H-12} fill="#64748b" fontSize="9" fontFamily="Inter">SAT 1100</text>
+        <text x={W-60} y={H-12} fill="#64748b" fontSize="9" fontFamily="Inter">SAT 1600</text>
+        <text x="6" y="20" fill="#64748b" fontSize="9" fontFamily="Inter">GPA 4.2</text>
+        <text x="6" y={H-30} fill="#64748b" fontSize="9" fontFamily="Inter">GPA 3.0</text>
+        <text x={meX-22} y={meY-14} fill="#22d3ee" fontSize="10" fontWeight="700" fontFamily="Inter" opacity={meOp}>You</text>
+      </svg>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginTop:8,fontSize:10.5,color:"#94a3b8",fontFamily:"Inter"}}>
+        <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
+          <span style={{width:7,height:7,borderRadius:999,background:"#22c55e"}}/>Admitted
+        </span>
+        <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
+          <span style={{width:7,height:7,borderRadius:999,background:"#fb7185"}}/>Denied
+        </span>
+        <span style={{marginLeft:"auto",color:"#22d3ee",fontWeight:700}}>You're in the band</span>
+      </div>
+    </div>
+  );
+}
+
+// LP-style mini College Search panel
+function LPSearchPanel({ t, delay }) {
+  const op = clamp((t - delay)*2, 0, 1);
+  const y = (1-op)*14;
+  const colleges = [
+    { name:"Princeton University", tag:"REACH", c:"#fca5a5", rank:"#1 · Admit 6%" },
+    { name:"Tufts University", tag:"TARGET", c:"#facc15", rank:"#28 · Admit 11%" },
+    { name:"Vanderbilt University", tag:"TARGET", c:"#facc15", rank:"#13 · Admit 7%" },
+    { name:"University of Maryland", tag:"SAFETY", c:"#86efac", rank:"#46 · Admit 45%" },
+    { name:"University of Pittsburgh", tag:"SAFETY", c:"#86efac", rank:"#62 · Admit 67%" },
+  ];
+  return (
+    <div style={{
+      opacity:op, transform:`translateY(${y}px)`,
+      background:"#1a2332", border:"1px solid #3a4b65", borderRadius:18, padding:14,
+    }}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+        <div>
+          <div style={{fontSize:11,letterSpacing:".18em",color:"#94a3b8",textTransform:"uppercase",fontWeight:700,fontFamily:"Inter"}}>College Match · starter list</div>
+          <div style={{fontSize:14,fontWeight:600,color:"#f3f4f6",fontFamily:"Inter"}}>5 schools · auto-balanced</div>
+        </div>
+        <div style={{padding:"3px 10px",borderRadius:999,background:"linear-gradient(135deg,#22d3ee,#3b82f6)",color:"#020617",fontSize:10,fontFamily:"Inter",fontWeight:800}}>BUILD</div>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+        {colleges.map((c,i)=>{
+          const co = clamp((t - delay - 0.3 - i*0.18)*2, 0, 1);
+          const cy = (1-co)*8;
+          return (
+            <div key={i} style={{
+              opacity:co, transform:`translateY(${cy}px)`,
+              display:"flex",alignItems:"center",gap:10,
+              background:"#111827", border:"1px solid #3a4b65", borderRadius:12,
+              padding:"8px 11px",
+            }}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:12.5,fontWeight:600,color:"#f3f4f6",fontFamily:"Inter"}}>{c.name}</div>
+                <div style={{fontSize:10,color:"#94a3b8",fontFamily:"Inter",marginTop:1}}>{c.rank}</div>
+              </div>
+              <div style={{
+                padding:"2px 8px", borderRadius:999, fontSize:9.5, fontWeight:700,
+                border:`1px solid ${c.c}d0`, color:c.c, background:`${c.c}28`, fontFamily:"Inter",
+              }}>{c.tag}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SceneSophomore() {
+  const { localTime } = useSprite();
+  const t = localTime;
+  const yearOp = interpolate([0,0.6,13.5,14],[0,1,1,0])(t);
+  const titleOp = interpolate([0.4,1.2,13.5,14],[0,1,1,0])(t);
+  const panelsOp = interpolate([2,3,13.5,14],[0,1,1,0])(t);
+  const footOp = interpolate([6.5,7.5,13.5,14],[0,1,1,0])(t);
+
+  return (
+    <>
+      {/* LP background */}
+      <div style={{position:"absolute",inset:0,background:"radial-gradient(circle at top, #16202f 0%, #0b1120 60%, #020617 100%)"}}/>
+      {/* subtle accent glow */}
+      <div style={{position:"absolute",top:-180,right:-100,width:700,height:500,borderRadius:"50%",background:"radial-gradient(circle, #22d3ee20 0%, transparent 70%)",filter:"blur(20px)"}}/>
+
+      {/* year banner */}
+      <div style={{position:"absolute",left:80,top:50,opacity:yearOp,display:"flex",alignItems:"center",gap:16}}>
+        <div style={{
+          width:60,height:60,borderRadius:14,
+          background:"radial-gradient(circle at 30% 0, #22d3ee 0, #0ea5e9 30%, #111827 85%)",
+          display:"grid",placeItems:"center",fontSize:24,fontWeight:800,color:"#020617",
+          fontFamily:"Inter",boxShadow:"0 0 0 2px rgba(34,211,238,0.5), 0 8px 24px rgba(0,0,0,0.7)",
+        }}>10</div>
+        <div>
+          <div style={{fontSize:12,letterSpacing:".2em",color:"#67e8f9",textTransform:"uppercase",fontWeight:700,fontFamily:"Inter"}}>Sophomore Year</div>
+          <div style={{fontSize:32,fontWeight:800,color:"#f3f4f6",fontFamily:"Inter",letterSpacing:"-.02em",lineHeight:1.1}}>The journey begins</div>
+        </div>
+      </div>
+
+      {/* live status pill */}
+      <div style={{position:"absolute",right:80,top:60,opacity:yearOp,display:"flex",alignItems:"center",gap:8,
+        padding:"6px 14px",borderRadius:999,border:"1px solid rgba(148,163,184,0.6)",background:"rgba(15,23,42,0.9)",
+        fontSize:11,color:"#94a3b8",fontFamily:"Inter",letterSpacing:".05em"}}>
+        <span style={{width:7,height:7,borderRadius:999,background:"#22c55e",boxShadow:"0 0 0 4px rgba(34,197,94,0.25)"}}/>
+        Day one in your portal
+      </div>
+
+      {/* title */}
+      <div style={{position:"absolute",left:80,top:150,opacity:titleOp,maxWidth:1120}}>
+        <h2 style={{margin:0,fontSize:36,fontWeight:800,color:"#f3f4f6",fontFamily:"Inter",letterSpacing:"-.03em",lineHeight:1.1}}>
+          Your center stops being <span style={{color:"#94a3b8",fontWeight:700}}>"the SAT place"</span> — and becomes <span style={{background:"linear-gradient(135deg,#22d3ee,#3b82f6)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>where the journey begins.</span>
+        </h2>
+        <p style={{marginTop:10,fontSize:15,color:"#94a3b8",lineHeight:1.55,fontFamily:"Inter",maxWidth:820}}>
+          Day one, students explore 100 top schools and see live scattergrams — in <strong style={{color:"#22d3ee"}}>your</strong> branded portal, alongside their score reports. Families come for SAT. They stay for everything that comes next.
+        </p>
+      </div>
+
+      {/* two LP panels — side by side */}
+      <div style={{position:"absolute",left:80,top:300,opacity:panelsOp,width:480}}>
+        <LPSearchPanel t={t} delay={3}/>
+      </div>
+      <div style={{position:"absolute",right:80,top:300,opacity:panelsOp,width:420}}>
+        <LPScattergramTile t={t} delay={3.6}/>
+      </div>
+
+      {/* footer strip — the partnership message */}
+      <div style={{position:"absolute",left:80,right:80,bottom:60,opacity:footOp,display:"flex",alignItems:"center",gap:18,
+        padding:"16px 22px",borderRadius:18,background:"linear-gradient(90deg,#1a2332,#0f1722)",border:"1px solid #3a4b65"}}>
+        <div style={{
+          padding:"4px 10px",borderRadius:999,border:"1px solid rgba(56,189,248,0.9)",
+          background:"rgba(8,47,73,0.85)",color:"#e0f2fe",fontSize:10,fontWeight:700,letterSpacing:".1em",fontFamily:"Inter",
+        }}>FOR THE CENTER</div>
+        <div style={{flex:1,fontSize:14,color:"#cbd5e1",fontFamily:"Inter",lineHeight:1.5}}>
+          You own the <strong style={{color:"#22d3ee"}}>start</strong> of the college conversation. <span style={{color:"#94a3b8"}}>That's where the relationship — and the renewal — begins.</span>
+        </div>
+        <div style={{display:"flex",gap:10,alignItems:"baseline"}}>
+          <div style={{fontSize:38,fontWeight:800,color:"#22d3ee",fontFamily:"Inter",letterSpacing:"-.03em",fontVariantNumeric:"tabular-nums",lineHeight:1,textShadow:"0 0 20px #22d3ee66"}}>3×</div>
+          <div style={{fontSize:11,color:"#94a3b8",fontFamily:"Inter",letterSpacing:".12em",textTransform:"uppercase",fontWeight:700,maxWidth:120,lineHeight:1.3}}>longer LTV per family</div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ============================================================
+   SCENE 3: JUNIOR — FOUNDATION (22-37s)
+   ============================================================ */
+
+function SceneJunior() {
+  const { localTime } = useSprite();
+  const yearOp = interpolate([0,0.6,14.5,15],[0,1,1,0])(localTime);
+  const titleOp = interpolate([0.6,1.4,14.5,15],[0,1,1,0])(localTime);
+
+  // three feature cards stagger in
+  const cards = [
+    { title:"SAT Performance", body:"Score trends sync to the partner roster.", c:"#fb923c", icon:"↗", x:80, y:340 },
+    { title:"AI Essay Studio", body:"Voice-preserving brainstorm to draft.", c:"#fbbf24", icon:"✎", x:430, y:340 },
+    { title:"College Search", body:"100 top schools. Live bands. Filter by fit.", c:"#fde68a", icon:"◆", x:780, y:340 },
+  ];
+
+  return (
+    <>
+      <Bg from="#451a03" to="#1c1917" accent="#fb923c"/>
+      {/* year */}
+      <div style={{position:"absolute",left:80,top:60,opacity:yearOp,display:"flex",alignItems:"center",gap:16}}>
+        <div style={{
+          width:64,height:64,borderRadius:16,
+          background:"linear-gradient(135deg,#fbbf24,#f97316)",
+          display:"grid",placeItems:"center",fontSize:28,fontWeight:800,color:"#451a03",
+          fontFamily:"Inter",boxShadow:"0 0 30px #fbbf2488",
+        }}>11</div>
+        <div>
+          <div style={{fontSize:13,letterSpacing:".2em",color:"#fde68a",textTransform:"uppercase",fontWeight:700,fontFamily:"Inter"}}>Junior Year</div>
+          <div style={{fontSize:38,fontWeight:800,color:"#fff7ed",fontFamily:"Inter",letterSpacing:"-.02em",lineHeight:1.1}}>Foundation</div>
+        </div>
+      </div>
+      <div style={{position:"absolute",left:80,top:200,opacity:titleOp,maxWidth:1120}}>
+        <h2 style={{margin:0,fontSize:42,fontWeight:800,color:"#fffbeb",fontFamily:"Inter",letterSpacing:"-.03em",lineHeight:1.08}}>
+          Three reasons families <span style={{color:"#fbbf24"}}>stay all year.</span>
+        </h2>
+        <p style={{marginTop:14,fontSize:17,color:"#fed7aa",lineHeight:1.6,fontFamily:"Inter",maxWidth:880}}>
+          Without LP, you're an SAT vendor. With LP, you're the partner that handles every step — SAT, essays, college search — under <strong style={{color:"#fde68a"}}>your</strong> brand. One log-in. One renewal.
+        </p>
+      </div>
+      {/* feature cards */}
+      {cards.map((c,i) => {
+        const op = clamp((localTime - 2.5 - i*0.5)*1.6, 0, 1);
+        const y = (1-op)*20;
+        return (
+          <div key={i} style={{
+            position:"absolute",left:c.x,top:c.y,
+            width:300,height:200,opacity:op,transform:`translateY(${y}px)`,
+            padding:24,borderRadius:18,
+            background:`linear-gradient(180deg,${c.c}22,${c.c}08)`,
+            border:`1px solid ${c.c}55`,
+            backdropFilter:"blur(10px)",
+            boxShadow:`0 0 30px ${c.c}22`,
+          }}>
+            <div style={{fontSize:36,marginBottom:12,color:c.c}}>{c.icon}</div>
+            <div style={{fontSize:20,fontWeight:800,color:"#fffbeb",fontFamily:"Inter",marginBottom:8}}>{c.title}</div>
+            <div style={{fontSize:14,color:"#fed7aa",lineHeight:1.5,fontFamily:"Inter"}}>{c.body}</div>
+          </div>
+        );
+      })}
+      {/* progress ticker */}
+      <div style={{position:"absolute",left:80,bottom:60,opacity:titleOp,display:"flex",gap:14,alignItems:"center"}}>
+        <Eyebrow text="1 Platform · 1 Center" color="#fbbf24"/>
+        <div style={{fontSize:14,color:"#fed7aa",fontFamily:"Inter",fontStyle:"italic"}}>students average 4.2 logins/week</div>
+      </div>
+    </>
+  );
+}
+
+/* ============================================================
+   SCENE 4: SENIOR FALL — APPLICATION (37-57s)
+   ============================================================ */
+
+function ProgressRingMini({ pct, color, size=80 }) {
+  const r = (size-8)/2;
+  const c = 2*Math.PI*r;
+  return (
+    <svg width={size} height={size}>
+      <circle cx={size/2} cy={size/2} r={r} stroke="#ffffff20" strokeWidth="6" fill="none"/>
+      <circle cx={size/2} cy={size/2} r={r} stroke={color} strokeWidth="6" fill="none"
+        strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c-(c*pct)/100}
+        transform={`rotate(-90 ${size/2} ${size/2})`}
+        style={{filter:`drop-shadow(0 0 6px ${color})`}}/>
+      <text x={size/2} y={size/2+5} fill={color} fontSize="18" fontWeight="800" textAnchor="middle" fontFamily="Inter">{pct}</text>
+    </svg>
+  );
+}
+
+// LP-style college card (lifted from College Match)
+function LPCollegeCard({ name, tag, tagColor, ranking, fitPct, delay, t }) {
+  const op = clamp((t - delay)*2, 0, 1);
+  const y = (1 - op) * 14;
+  const pct = Math.floor(animate({from:0, to:fitPct, start:delay+0.3, end:delay+1.6, ease:Easing.easeOutCubic})(t));
+  return (
+    <div style={{
+      opacity: op, transform:`translateY(${y}px)`,
+      background:"#111827", borderRadius:14, padding:"11px 13px",
+      border:"1px solid #3a4b65",
+      display:"flex", flexDirection:"column", gap:6,
+    }}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+        <div style={{fontSize:13,fontWeight:600,color:"#f3f4f6",fontFamily:"Inter"}}>{name}</div>
+        <div style={{
+          padding:"1px 8px", borderRadius:999, fontSize:10, fontWeight:700,
+          border:`1px solid ${tagColor}d0`, color:tagColor,
+          background:`${tagColor}28`, fontFamily:"Inter",
+        }}>{tag}</div>
+      </div>
+      <div style={{fontSize:10.5,color:"#94a3b8",fontFamily:"Inter"}}>{ranking}</div>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginTop:2}}>
+        <div style={{flex:1,height:5,borderRadius:999,background:"#020617",border:"1px solid #1e293b",overflow:"hidden"}}>
+          <div style={{width:`${pct}%`,height:"100%",background:"linear-gradient(90deg,#22d3ee,#3b82f6)",boxShadow:"0 0 8px #22d3ee"}}/>
+        </div>
+        <div style={{fontSize:10.5,fontFamily:"Inter",color:"#22d3ee",fontWeight:700,fontVariantNumeric:"tabular-nums",width:30,textAlign:"right"}}>{pct}%</div>
+      </div>
+    </div>
+  );
+}
+
+// LP-style mini Essay Studio panel
+function LPEssayPanel({ t, delay }) {
+  const op = clamp((t - delay)*2, 0, 1);
+  const y = (1-op)*14;
+  const score = Math.floor(animate({from:42, to:91, start:delay+0.4, end:delay+3, ease:Easing.easeOutCubic})(t));
+  const wc = Math.floor(animate({from:120, to:642, start:delay+0.4, end:delay+3, ease:Easing.easeOutCubic})(t));
+  // typing lines
+  const lines = [
+    "The summer I learned to weld, my hands wouldn't stop",
+    "shaking — not from fear, but from the weight of the torch.",
+    "My grandfather pressed his palm against mine and said,",
+    "\"Steady comes from the breath, not the grip.\"",
+  ];
+  const charsPerSec = 38;
+  const totalChars = lines.join(" ").length;
+  const visible = Math.min(totalChars, Math.floor(Math.max(0, t - delay - 0.5) * charsPerSec));
+  let used = 0;
+  return (
+    <div style={{
+      opacity: op, transform:`translateY(${y}px)`,
+      background:"#2c3a52", border:"1px solid #3a4b65", borderRadius:18, padding:14,
+      width: 460,
+    }}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+        <div>
+          <div style={{fontSize:11,letterSpacing:".18em",color:"#94a3b8",textTransform:"uppercase",fontWeight:700,fontFamily:"Inter"}}>Essay Studio</div>
+          <div style={{fontSize:14,fontWeight:600,color:"#f3f4f6",fontFamily:"Inter"}}>Common App · Personal Statement</div>
+        </div>
+        <div style={{
+          background:"#111827",border:"1px solid #3a4b65",borderRadius:12,
+          padding:"6px 12px",textAlign:"center",
+        }}>
+          <div style={{fontSize:9,letterSpacing:".15em",color:"#94a3b8",fontWeight:700,fontFamily:"Inter"}}>SCORE</div>
+          <div style={{fontSize:18,fontWeight:800,color:"#22d3ee",fontFamily:"Inter",lineHeight:1,fontVariantNumeric:"tabular-nums"}}>{score}</div>
+        </div>
+      </div>
+      {/* mock editor */}
+      <div style={{
+        background:"#111827", border:"1px solid #3a4b65", borderRadius:12,
+        padding:"10px 12px", height:120, fontSize:11.5, lineHeight:1.55,
+        fontFamily:"ui-monospace, Menlo, monospace", color:"#e5e7eb",
+        position:"relative", overflow:"hidden",
+      }}>
+        {lines.map((line, i) => {
+          const start = used;
+          used += line.length + 1;
+          const slice = Math.max(0, Math.min(line.length, visible - start));
+          return (
+            <div key={i}>
+              {line.slice(0, slice)}
+              {slice < line.length && slice > 0 && i === lines.findIndex((_, idx) => {
+                let u=0; for (let k=0;k<idx;k++) u+=lines[k].length+1; return u + lines[idx].length > visible;
+              }) && <span style={{
+                display:"inline-block",width:2,height:13,background:"#22d3ee",
+                marginLeft:1,verticalAlign:"middle",
+                opacity: Math.floor(t*2)%2 ? 1 : 0,
+              }}/>}
+            </div>
+          );
+        })}
+      </div>
+      {/* score bar + meta */}
+      <div style={{marginTop:10,display:"flex",alignItems:"center",gap:10}}>
+        <div style={{flex:1,height:8,borderRadius:999,background:"#111827",border:"1px solid #3a4b65",overflow:"hidden"}}>
+          <div style={{width:`${score}%`,height:"100%",background:"linear-gradient(90deg,#22d3ee,#3b82f6)",boxShadow:"0 0 10px #22d3ee88"}}/>
+        </div>
+        <div style={{fontSize:10.5,color:"#94a3b8",fontFamily:"Inter",fontVariantNumeric:"tabular-nums"}}>{wc}/650 words</div>
+      </div>
+      {/* coach pills */}
+      <div style={{marginTop:10,display:"flex",gap:6,flexWrap:"wrap"}}>
+        {[
+          {label:"Voice ✓", c:"#22c55e"},
+          {label:"Specificity ✓", c:"#22c55e"},
+          {label:"Hook · sharpen", c:"#fbbf24"},
+          {label:"Reflection · expand", c:"#22d3ee"},
+        ].map((p,i)=>{
+          const pop = clamp((t - delay - 1.5 - i*0.2)*2, 0, 1);
+          return <div key={i} style={{
+            opacity:pop, fontSize:10, fontWeight:700, fontFamily:"Inter",
+            padding:"3px 8px", borderRadius:999,
+            border:`1px solid ${p.c}80`, color:p.c, background:`${p.c}15`,
+          }}>{p.label}</div>;
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SceneSeniorFall() {
+  const { localTime } = useSprite();
+  const t = localTime;
+  const yearOp = interpolate([0,0.6,18.5,19],[0,1,1,0])(t);
+  const titleOp = interpolate([0.6,1.4,18.5,19],[0,1,1,0])(t);
+  const cmOp = interpolate([2,2.8,18.5,19],[0,1,1,0])(t);
+  const submitOp = interpolate([13,14,18.5,19],[0,1,1,0])(t);
+
+  // College Match — 3 cards
+  const colleges = [
+    { name:"Princeton University", tag:"REACH", tagColor:"#fca5a5", ranking:"Ranked #1 · Admit 6%", fitPct:62, delay:3.2 },
+    { name:"Tufts University", tag:"TARGET", tagColor:"#facc15", ranking:"Ranked #28 · Admit 11%", fitPct:81, delay:3.8 },
+    { name:"University of Maryland", tag:"SAFETY", tagColor:"#86efac", ranking:"Ranked #46 · Admit 45%", fitPct:94, delay:4.4 },
+  ];
+
+  // submit counter for the bottom
+  const submitCount = Math.floor(animate({from:0, to:312, start:13.5, end:16, ease:Easing.easeOutCubic})(t));
+
+  return (
+    <>
+      {/* LP background — radial slate */}
+      <div style={{position:"absolute",inset:0,background:"radial-gradient(circle at top, #16202f 0%, #0b1120 60%, #020617 100%)"}}/>
+      {/* subtle accent glow */}
+      <div style={{position:"absolute",top:-200,left:"50%",transform:"translateX(-50%)",width:900,height:600,borderRadius:"50%",background:"radial-gradient(circle, #22d3ee18 0%, transparent 70%)",filter:"blur(20px)"}}/>
+
+      {/* year banner */}
+      <div style={{position:"absolute",left:80,top:50,opacity:yearOp,display:"flex",alignItems:"center",gap:16}}>
+        <div style={{
+          width:60,height:60,borderRadius:14,
+          background:"radial-gradient(circle at 30% 0, #22d3ee 0, #0ea5e9 30%, #111827 85%)",
+          display:"grid",placeItems:"center",fontSize:24,fontWeight:800,color:"#020617",
+          fontFamily:"Inter",boxShadow:"0 0 0 2px rgba(34,211,238,0.5), 0 8px 24px rgba(0,0,0,0.7)",
+        }}>12</div>
+        <div>
+          <div style={{fontSize:12,letterSpacing:".2em",color:"#67e8f9",textTransform:"uppercase",fontWeight:700,fontFamily:"Inter"}}>Senior Fall</div>
+          <div style={{fontSize:32,fontWeight:800,color:"#f3f4f6",fontFamily:"Inter",letterSpacing:"-.02em",lineHeight:1.1}}>Application</div>
+        </div>
+      </div>
+
+      {/* live status pill (LP-style) */}
+      <div style={{position:"absolute",right:80,top:60,opacity:yearOp,display:"flex",alignItems:"center",gap:8,
+        padding:"6px 14px",borderRadius:999,border:"1px solid rgba(148,163,184,0.6)",background:"rgba(15,23,42,0.9)",
+        fontSize:11,color:"#94a3b8",fontFamily:"Inter",letterSpacing:".05em"}}>
+        <span style={{width:7,height:7,borderRadius:999,background:"#22c55e",boxShadow:"0 0 0 4px rgba(34,197,94,0.25)"}}/>
+        Live across your roster
+      </div>
+
+      {/* title */}
+      <div style={{position:"absolute",left:80,top:150,opacity:titleOp,maxWidth:1120}}>
+        <h2 style={{margin:0,fontSize:38,fontWeight:800,color:"#f3f4f6",fontFamily:"Inter",letterSpacing:"-.03em",lineHeight:1.1}}>
+          When the season hits, your center is <span style={{background:"linear-gradient(135deg,#22d3ee,#3b82f6)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>where the work happens.</span>
+        </h2>
+        <p style={{marginTop:10,fontSize:15,color:"#94a3b8",lineHeight:1.55,fontFamily:"Inter",maxWidth:880}}>
+          College Match narrows the list. Essay Studio writes the supplements. Every submit goes through <strong style={{color:"#22d3ee"}}>your</strong> portal — the platform of choice for the most ambitious centers.
+        </p>
+      </div>
+
+      {/* College Match panel — left */}
+      <div style={{position:"absolute",left:80,top:300,opacity:cmOp,width:460}}>
+        <div style={{
+          background:"#1a2332", border:"1px solid #3a4b65", borderRadius:20, padding:14,
+        }}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+            <div>
+              <div style={{fontSize:11,letterSpacing:".18em",color:"#94a3b8",textTransform:"uppercase",fontWeight:700,fontFamily:"Inter"}}>College Match</div>
+              <div style={{fontSize:14,fontWeight:600,color:"#f3f4f6",fontFamily:"Inter"}}>Balanced list · 12 schools</div>
+            </div>
+            <div style={{display:"flex",gap:6}}>
+              {[
+                {l:"Reach", c:"#fca5a5", n:4},
+                {l:"Target", c:"#facc15", n:5},
+                {l:"Safety", c:"#86efac", n:3},
+              ].map((s,i)=>(
+                <div key={i} style={{padding:"3px 8px",borderRadius:999,border:`1px solid ${s.c}80`,color:s.c,background:`${s.c}18`,fontSize:10,fontFamily:"Inter",fontWeight:700}}>
+                  {s.l} {s.n}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {colleges.map((c,i)=>(
+              <LPCollegeCard key={i} {...c} t={t}/>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Essay Studio panel — right */}
+      <div style={{position:"absolute",right:80,top:300,opacity:cmOp}}>
+        <LPEssayPanel t={t} delay={4.5}/>
+      </div>
+
+      {/* bottom row: submit-ready live counter (LP-styled) */}
+      <div style={{position:"absolute",left:80,right:80,bottom:60,opacity:submitOp,display:"flex",alignItems:"center",gap:18,
+        padding:"16px 22px",borderRadius:18,background:"linear-gradient(90deg,#1a2332,#0f1722)",border:"1px solid #3a4b65"}}>
+        <div style={{
+          padding:"4px 10px",borderRadius:999,border:"1px solid rgba(56,189,248,0.9)",
+          background:"rgba(8,47,73,0.85)",color:"#e0f2fe",fontSize:10,fontWeight:700,letterSpacing:".1em",fontFamily:"Inter",
+        }}>LIVE</div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:11,letterSpacing:".18em",color:"#94a3b8",textTransform:"uppercase",fontWeight:700,fontFamily:"Inter"}}>Submit-ready applications · this cohort</div>
+          <div style={{fontSize:13,color:"#cbd5e1",fontFamily:"Inter",marginTop:2}}>Every submit happens inside <strong style={{color:"#22d3ee"}}>your</strong> branded portal.</div>
+        </div>
+        <div style={{
+          fontSize:54,fontWeight:800,color:"#22d3ee",fontFamily:"Inter",letterSpacing:"-.03em",
+          fontVariantNumeric:"tabular-nums",lineHeight:1,textShadow:"0 0 24px #22d3ee88",
+        }}>{submitCount.toLocaleString()}</div>
+      </div>
+    </>
+  );
+}
+
+/* ============================================================
+   SCENE 5: SENIOR SPRING — ACCEPTANCE (57-69s)
+   ============================================================ */
+
+// Animated Instagram-style social card the Social Studio outputs
+function LPSocialCard({ student, college, hashtag, gradient, t, delay, x, y, rot }) {
+  const op = clamp((t - delay)*2.2, 0, 1);
+  const lift = (1 - op) * 30;
+  const float = Math.sin((t - delay) * 1.2) * 4;
+  // count-up "likes"
+  const likes = Math.floor(animate({from:0, to: 800 + Math.floor(Math.abs(Math.sin(delay*7))*2400), start:delay+0.6, end:delay+3.5, ease:Easing.easeOutCubic})(t));
+  return (
+    <div style={{
+      position:"absolute", left:x, top:y,
+      opacity:op,
+      transform:`translateY(${lift + float}px) rotate(${rot}deg)`,
+      width:188,
+      borderRadius:18,
+      background:"#020617",
+      border:"1px solid #3a4b65",
+      boxShadow:"0 24px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04)",
+      overflow:"hidden",
+      fontFamily:"Inter",
+    }}>
+      {/* header bar mimicking IG */}
+      <div style={{display:"flex",alignItems:"center",gap:7,padding:"6px 9px",background:"#0f172a",borderBottom:"1px solid #1e293b"}}>
+        <div style={{width:18,height:18,borderRadius:"50%",background:"radial-gradient(circle at 30% 0,#22d3ee 0,#0ea5e9 40%,#111827 95%)",boxShadow:"0 0 0 1px rgba(56,189,248,.6)"}}/>
+        <div style={{flex:1,fontSize:9.5,fontWeight:700,color:"#f3f4f6"}}>elite.prep.center</div>
+        <div style={{fontSize:12,color:"#94a3b8",lineHeight:1}}>···</div>
+      </div>
+      {/* poster image — gradient with college badge */}
+      <div style={{
+        height:172,
+        background: gradient,
+        position:"relative",
+        display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",
+      }}>
+        {/* shimmer light */}
+        <div style={{position:"absolute",inset:0,background:`radial-gradient(circle at ${30 + Math.sin((t-delay)*0.8)*15}% 30%, rgba(255,255,255,0.18) 0%, transparent 60%)`}}/>
+        <div style={{fontSize:9,fontWeight:700,letterSpacing:".22em",textTransform:"uppercase",color:"rgba(255,255,255,0.85)",position:"relative"}}>Class of 2028</div>
+        <div style={{fontSize:26,fontWeight:800,letterSpacing:"-.025em",color:"#fff",position:"relative",lineHeight:1.05,marginTop:5,textAlign:"center",padding:"0 10px",textShadow:"0 2px 12px rgba(0,0,0,0.3)"}}>{college}</div>
+        <div style={{marginTop:7,fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.95)",position:"relative"}}>{student}</div>
+        {/* center brand chip */}
+        <div style={{
+          position:"absolute",bottom:8,left:8,
+          padding:"3px 7px",borderRadius:999,
+          background:"rgba(2,6,23,0.55)",backdropFilter:"blur(6px)",
+          border:"1px solid rgba(255,255,255,0.18)",
+          fontSize:7.5,fontWeight:700,color:"#fff",letterSpacing:".1em",
+        }}>ELITE PREP CENTER</div>
+        {/* LP attribution */}
+        <div style={{
+          position:"absolute",bottom:8,right:8,
+          padding:"2px 6px",borderRadius:5,
+          background:"rgba(255,255,255,0.18)",backdropFilter:"blur(6px)",
+          fontSize:7.5,fontWeight:700,color:"#fff",letterSpacing:".06em",
+          display:"flex",alignItems:"center",gap:3,
+        }}>
+          <span style={{width:4,height:4,borderRadius:"50%",background:"#22d3ee",boxShadow:"0 0 6px #22d3ee"}}/>
+          via LaunchPath
+        </div>
+      </div>
+      {/* footer: likes + hashtag */}
+      <div style={{padding:"6px 9px"}}>
+        <div style={{display:"flex",gap:8,fontSize:11,color:"#f3f4f6",marginBottom:3}}>
+          <span>♥</span><span>○</span><span>↪</span>
+        </div>
+        <div style={{fontSize:9.5,fontWeight:700,color:"#f3f4f6",fontVariantNumeric:"tabular-nums"}}>{likes.toLocaleString()} likes</div>
+        <div style={{fontSize:8.5,color:"#22d3ee",marginTop:2,fontWeight:600}}>{hashtag}</div>
+      </div>
+    </div>
+  );
+}
+
+function SceneSeniorSpring() {
+  const { localTime } = useSprite();
+  const t = localTime;
+  const yearOp = interpolate([0,0.6,11.5,12],[0,1,1,0])(t);
+  const titleOp = interpolate([0.6,1.4,11.5,12],[0,1,1,0])(t);
+  const consoleOp = interpolate([1.6,2.3,11.5,12],[0,1,1,0])(t);
+  const footOp = interpolate([8,9,11.5,12],[0,1,1,0])(t);
+
+  // generation queue items
+  const queue = [
+    { stage:"Princeton · Amara O.",       delay:2.4, status:"Generated" },
+    { stage:"Stanford · Daniel P.",       delay:3.0, status:"Generated" },
+    { stage:"MIT · Sofía M.",             delay:3.6, status:"Generating…" },
+    { stage:"Columbia · Priya R.",        delay:4.2, status:"Queued" },
+  ];
+
+  // four social cards drift onto the canvas, like LP "publishing" them
+  // arranged in two staggered rows that sit above the bottom KPI strip
+  const cards = [
+    { student:"Amara O.", college:"PRINCETON", hashtag:"#TigerBound", gradient:"linear-gradient(135deg, #f59e0b 0%, #b45309 100%)", delay:3.0, x:560, y:215, rot:-6 },
+    { student:"Daniel P.", college:"STANFORD", hashtag:"#StanfordCommit", gradient:"linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%)", delay:3.8, x:790, y:240, rot:5 },
+    { student:"Sofía M.", college:"MIT", hashtag:"#IHackedTheAdmit", gradient:"linear-gradient(135deg, #1e40af 0%, #312e81 100%)", delay:4.6, x:1020, y:215, rot:-3 },
+    { student:"Priya R.", college:"COLUMBIA", hashtag:"#RoarLion", gradient:"linear-gradient(135deg, #0891b2 0%, #155e75 100%)", delay:5.4, x:680, y:330, rot:7 },
+    { student:"Layla H.", college:"NORTHWESTERN", hashtag:"#WildcatWins", gradient:"linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%)", delay:6.2, x:910, y:345, rot:-5 },
+  ];
+
+  // count-up KPIs at bottom
+  const totalPosts = Math.floor(animate({from:0, to:847, start:8.5, end:11, ease:Easing.easeOutCubic})(t));
+  const reach = Math.floor(animate({from:0, to:412, start:8.7, end:11, ease:Easing.easeOutCubic})(t));
+  const inquiries = Math.floor(animate({from:0, to:38, start:8.9, end:11, ease:Easing.easeOutCubic})(t));
+
+  return (
+    <>
+      {/* LP background */}
+      <div style={{position:"absolute",inset:0,background:"radial-gradient(circle at top, #16202f 0%, #0b1120 60%, #020617 100%)"}}/>
+      {/* green tint glow for the "wins" mood */}
+      <div style={{position:"absolute",top:-200,left:"30%",width:700,height:600,borderRadius:"50%",background:"radial-gradient(circle, #22c55e18 0%, transparent 70%)",filter:"blur(20px)"}}/>
+
+      {/* year banner */}
+      <div style={{position:"absolute",left:80,top:50,opacity:yearOp,display:"flex",alignItems:"center",gap:16}}>
+        <div style={{
+          width:60,height:60,borderRadius:14,
+          background:"radial-gradient(circle at 30% 0, #22d3ee 0, #0ea5e9 30%, #111827 85%)",
+          display:"grid",placeItems:"center",fontSize:24,fontWeight:800,color:"#020617",
+          fontFamily:"Inter",boxShadow:"0 0 0 2px rgba(34,211,238,0.5), 0 8px 24px rgba(0,0,0,0.7)",
+        }}>✓</div>
+        <div>
+          <div style={{fontSize:12,letterSpacing:".2em",color:"#67e8f9",textTransform:"uppercase",fontWeight:700,fontFamily:"Inter"}}>Senior Spring</div>
+          <div style={{fontSize:32,fontWeight:800,color:"#f3f4f6",fontFamily:"Inter",letterSpacing:"-.02em",lineHeight:1.1}}>Social Studio</div>
+        </div>
+      </div>
+
+      {/* status pill */}
+      <div style={{position:"absolute",right:80,top:60,opacity:yearOp,display:"flex",alignItems:"center",gap:8,
+        padding:"6px 14px",borderRadius:999,border:"1px solid rgba(148,163,184,0.6)",background:"rgba(15,23,42,0.9)",
+        fontSize:11,color:"#94a3b8",fontFamily:"Inter",letterSpacing:".05em"}}>
+        <span style={{width:7,height:7,borderRadius:999,background:"#22c55e",boxShadow:"0 0 0 4px rgba(34,197,94,0.25)"}}/>
+        Auto-publishing wins
+      </div>
+
+      {/* title */}
+      <div style={{position:"absolute",left:80,top:150,opacity:titleOp,maxWidth:1120}}>
+        <h2 style={{margin:0,fontSize:36,fontWeight:800,color:"#f3f4f6",fontFamily:"Inter",letterSpacing:"-.03em",lineHeight:1.1}}>
+          The wins post to social — <span style={{background:"linear-gradient(135deg,#22d3ee,#3b82f6)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>via LaunchPath AI.</span>
+        </h2>
+        <p style={{marginTop:10,fontSize:15,color:"#94a3b8",lineHeight:1.55,fontFamily:"Inter",maxWidth:780}}>
+          Social Studio auto-generates branded acceptance posts the moment a student commits. Your logo. Their college. One tap to publish.
+        </p>
+      </div>
+
+      {/* LEFT: Social Studio "console" — generation queue */}
+      <div style={{position:"absolute",left:80,top:300,opacity:consoleOp,width:420}}>
+        <div style={{
+          background:"#1a2332", border:"1px solid #3a4b65", borderRadius:18, padding:14,
+        }}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+            <div>
+              <div style={{fontSize:11,letterSpacing:".18em",color:"#94a3b8",textTransform:"uppercase",fontWeight:700,fontFamily:"Inter"}}>Social Studio</div>
+              <div style={{fontSize:14,fontWeight:600,color:"#f3f4f6",fontFamily:"Inter"}}>Acceptance posts · this week</div>
+            </div>
+            <div style={{padding:"3px 10px",borderRadius:999,background:"linear-gradient(135deg,#22d3ee,#3b82f6)",color:"#020617",fontSize:10,fontFamily:"Inter",fontWeight:800}}>RENDER</div>
+          </div>
+          {/* queue items */}
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {queue.map((q,i)=>{
+              const op = clamp((t - 2.0 - i*0.35)*2.2, 0, 1);
+              const isGen = q.status === "Generating…";
+              const isQueue = q.status === "Queued";
+              const c = isGen ? "#22d3ee" : isQueue ? "#94a3b8" : "#22c55e";
+              const fillPct = Math.floor(animate({from:0, to:100, start:q.delay-0.6, end:q.delay+0.4, ease:Easing.easeOutCubic})(t));
+              return (
+                <div key={i} style={{
+                  opacity:op,
+                  display:"flex",alignItems:"center",gap:10,
+                  background:"#111827", border:"1px solid #3a4b65", borderRadius:12,
+                  padding:"9px 12px",
+                }}>
+                  <div style={{width:24,height:24,borderRadius:6,
+                    background: isGen ? "linear-gradient(135deg,#22d3ee,#3b82f6)" : isQueue ? "#1e293b" : "#0d3d24",
+                    border:`1px solid ${c}66`,
+                    display:"grid",placeItems:"center",
+                    fontSize:11,fontWeight:800,color: isQueue ? "#94a3b8" : "#fff",
+                    fontFamily:"Inter",
+                  }}>{isGen ? "↻" : isQueue ? "•" : "✓"}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:12.5,fontWeight:600,color:"#f3f4f6",fontFamily:"Inter"}}>{q.stage}</div>
+                    {/* render bar */}
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginTop:4}}>
+                      <div style={{flex:1,height:3,borderRadius:999,background:"#020617",overflow:"hidden"}}>
+                        <div style={{width:`${fillPct}%`,height:"100%",background:`linear-gradient(90deg,${c},${c}88)`,boxShadow:`0 0 6px ${c}`}}/>
+                      </div>
+                      <div style={{fontSize:9.5,color:c,fontFamily:"Inter",fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:".05em",width:74,textAlign:"right"}}>{q.status}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {/* publish targets row */}
+          <div style={{marginTop:12,display:"flex",alignItems:"center",gap:6,paddingTop:10,borderTop:"1px solid #2a3a52"}}>
+            <div style={{fontSize:9.5,color:"#94a3b8",fontFamily:"Inter",letterSpacing:".15em",textTransform:"uppercase",fontWeight:700,marginRight:4}}>Publish to</div>
+            {[
+              {l:"IG",c:"#ec4899"},
+              {l:"TikTok",c:"#22d3ee"},
+              {l:"X",c:"#f3f4f6"},
+              {l:"FB",c:"#3b82f6"},
+            ].map((p,i)=>{
+              const ringOp = clamp((t - 6.5 - i*0.15)*2, 0, 1);
+              return <div key={i} style={{
+                opacity:ringOp,
+                padding:"3px 9px",borderRadius:999,
+                border:`1px solid ${p.c}80`,color:p.c,background:`${p.c}18`,
+                fontSize:9.5,fontFamily:"Inter",fontWeight:700,letterSpacing:".05em",
+              }}>{p.l}</div>;
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* RIGHT: floating social post cards drifting onto canvas */}
+      {cards.map((c,i)=>(
+        <LPSocialCard key={i} {...c} t={t}/>
+      ))}
+
+      {/* bottom KPI strip */}
+      <div style={{position:"absolute",left:80,right:80,bottom:30,opacity:footOp,display:"flex",gap:10,alignItems:"stretch"}}>
+        <div style={{
+          padding:"4px 10px",borderRadius:999,border:"1px solid rgba(56,189,248,0.9)",
+          background:"rgba(8,47,73,0.85)",color:"#e0f2fe",fontSize:10,fontWeight:700,letterSpacing:".1em",fontFamily:"Inter",
+          alignSelf:"center",
+        }}>FREE MARKETING</div>
+        <div style={{flex:1,fontSize:14,color:"#cbd5e1",fontFamily:"Inter",lineHeight:1.5,alignSelf:"center"}}>
+          Every win posted is an ad for your center. <strong style={{color:"#22d3ee"}}>The "via LaunchPath" stamp builds trust</strong> — but the brand families remember is <strong style={{color:"#fff"}}>yours.</strong>
+        </div>
+        {[
+          {n:totalPosts.toLocaleString(), lbl:"Posts auto-rendered", c:"#22d3ee"},
+          {n:reach.toLocaleString()+"K", lbl:"Organic reach this season", c:"#22c55e"},
+          {n:inquiries.toLocaleString(), lbl:"New family inquiries", c:"#a78bfa"},
+        ].map((s,i)=>(
+          <div key={i} style={{padding:"8px 14px",borderRadius:12,background:"#0f1722",border:`1px solid ${s.c}44`,minWidth:120}}>
+            <div style={{fontSize:20,fontWeight:800,color:s.c,fontFamily:"Inter",letterSpacing:"-.02em",lineHeight:1,fontVariantNumeric:"tabular-nums",textShadow:`0 0 14px ${s.c}55`}}>{s.n}</div>
+            <div style={{fontSize:8.5,color:"#94a3b8",fontFamily:"Inter",letterSpacing:".12em",textTransform:"uppercase",marginTop:3,fontWeight:700,lineHeight:1.3}}>{s.lbl}</div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+/* ============================================================
+   SCENE 6: CLOSE (69-75s)
+   ============================================================ */
+
+function SceneClose() {
+  const { localTime } = useSprite();
+  const orbScale = animate({from:1.5,to:1,start:0,end:1,ease:Easing.easeOutCubic})(localTime);
+  const titleOp = interpolate([0.6,1.4,10.5,11],[0,1,1,0])(localTime);
+  const ctaOp = interpolate([2,3,10.5,11],[0,1,1,0])(localTime);
+
+  return (
+    <>
+      <Bg from="#020617" to="#0b1120" accent="#38bdf8"/>
+      <Stars/>
+      <div style={{position:"absolute",left:"50%",top:"22%",transform:`translate(-50%,-50%) scale(${orbScale})`}}>
+        <Orb size={100} accent="#38bdf8" glow={1.8}/>
+      </div>
+      <div style={{position:"absolute",left:"50%",top:"52%",transform:"translate(-50%,-50%)",opacity:titleOp,textAlign:"center",width:"90%"}}>
+        <h2 style={{margin:0,fontSize:54,fontWeight:800,color:"#f8fafc",fontFamily:"Inter",letterSpacing:"-.04em",lineHeight:1.05}}>
+          New revenue. Higher retention.
+        </h2>
+        <h2 style={{margin:"8px 0 0",fontSize:54,fontWeight:800,fontFamily:"Inter",letterSpacing:"-.04em",lineHeight:1.05,
+          background:"linear-gradient(90deg,#7dd3fc,#38bdf8 50%,#a78bfa)",
+          WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",
+        }}>One partnership.</h2>
+        <p style={{margin:"24px auto 0",maxWidth:780,fontSize:18,color:"#cbd5e1",fontFamily:"Inter",lineHeight:1.5}}>
+          SAT centers grow revenue by partnering with LaunchPath AI — the platform of choice for the families who already trust you.
+        </p>
+      </div>
+      <div style={{position:"absolute",left:"50%",top:"75%",transform:"translate(-50%,-50%)",opacity:ctaOp,textAlign:"center"}}>
+        <div style={{display:"inline-flex",gap:12,alignItems:"center"}}>
+          <a href="partner.html" style={{padding:"14px 28px",borderRadius:999,background:"linear-gradient(90deg,#0ea5e9,#38bdf8)",color:"#082f49",fontFamily:"Inter",fontWeight:800,fontSize:16,boxShadow:"0 0 30px #38bdf966",textDecoration:"none",display:"inline-block",cursor:"pointer"}}>
+            Request a Private Demo →
+          </a>
+          <div style={{color:"#94a3b8",fontFamily:"Inter",fontSize:14}}>launchpathai.com/partners</div>
+        </div>
+        <div style={{marginTop:24,fontSize:13,letterSpacing:".2em",color:"#64748b",textTransform:"uppercase",fontWeight:600,fontFamily:"Inter"}}>
+          LaunchPath AI · Admissions OS
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ============================================================
+   YEAR TRANSITION OVERLAY — sweeping band between scenes
+   ============================================================ */
+
+function YearStripe({ at, color = "#38bdf8" }) {
+  const t = useTime();
+  const local = t - at;
+  if (local < -0.4 || local > 0.6) return null;
+  // progress from -0.4 → 0.6 (1.0 second band)
+  const p = (local + 0.4) / 1.0;
+  const x = -100 + p * (STAGE_W + 200);
+  const op = p < 0.3 ? p/0.3 : p > 0.7 ? (1-(p-0.7)/0.3) : 1;
+  return (
+    <div style={{
+      position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden",zIndex:50,
+    }}>
+      <div style={{
+        position:"absolute",left:x,top:0,bottom:0,width:200,
+        background:`linear-gradient(90deg,transparent,${color}aa,transparent)`,
+        opacity:op,transform:"skewX(-12deg)",
+      }}/>
+    </div>
+  );
+}
+
+/* ============================================================
+   PROGRESS BAR + YEAR LABELS
+   ============================================================ */
+
+function ProgressChrome() {
+  const t = useTime();
+  const segs = [
+    { lbl:"Open", start:0, end:12, c:"#38bdf8" },
+    { lbl:"Sophomore", start:12, end:26, c:"#22d3ee" },
+    { lbl:"Junior", start:26, end:41, c:"#fbbf24" },
+    { lbl:"Senior Fall", start:41, end:60, c:"#fb7185" },
+    { lbl:"Spring", start:60, end:72, c:"#22c55e" },
+    { lbl:"Matrix", start:72, end:84, c:"#38bdf8" },
+    { lbl:"Volume", start:84, end:100, c:"#a78bfa" },
+    { lbl:"Close", start:100, end:111, c:"#38bdf8" },
+  ];
+  return (
+    <div style={{
+      position:"absolute",left:24,right:24,bottom:18,
+      display:"flex",gap:6,alignItems:"center",zIndex:40,
+      fontFamily:"Inter",fontSize:10,letterSpacing:".14em",textTransform:"uppercase",
+    }}>
+      {segs.map((s,i) => {
+        const total = s.end - s.start;
+        const elapsed = clamp(t - s.start, 0, total);
+        const pct = (elapsed/total)*100;
+        const active = t >= s.start && t <= s.end;
+        return (
+          <div key={i} style={{flex:total,display:"flex",flexDirection:"column",gap:4}}>
+            <div style={{height:3,borderRadius:2,background:"#ffffff15",overflow:"hidden"}}>
+              <div style={{width:`${pct}%`,height:"100%",background:s.c,boxShadow:active?`0 0 10px ${s.c}`:"none",transition:"width .1s linear"}}/>
+            </div>
+            <div style={{color:active?s.c:"#475569",fontWeight:active?700:500,opacity:active?1:.6,transition:"all .3s"}}>
+              {s.lbl}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ============================================================
+   ROOT VIDEO
+   ============================================================ */
+
+function VideoApp() {
+  return (
+    <Stage width={STAGE_W} height={STAGE_H} duration={111} background="#020617">
+      <Sprite start={0} end={12.2}><SceneOpen/></Sprite>
+      <Sprite start={12} end={26.2}><SceneSophomore/></Sprite>
+      <Sprite start={26} end={41.2}><SceneJunior/></Sprite>
+      <Sprite start={41} end={60.2}><SceneSeniorFall/></Sprite>
+      <Sprite start={60} end={72.2}><SceneSeniorSpring/></Sprite>
+      <Sprite start={72} end={84.2}><SceneMatrix/></Sprite>
+      <Sprite start={84} end={100.2}><SceneSlider/></Sprite>
+      <Sprite start={100} end={111}><SceneClose/></Sprite>
+
+      <YearStripe at={12} color="#22d3ee"/>
+      <YearStripe at={26} color="#fbbf24"/>
+      <YearStripe at={41} color="#fb7185"/>
+      <YearStripe at={60} color="#22c55e"/>
+      <YearStripe at={72} color="#38bdf8"/>
+      <YearStripe at={84} color="#a78bfa"/>
+      <YearStripe at={100} color="#38bdf8"/>
+
+      <ProgressChrome/>
+    </Stage>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<VideoApp/>);
+</script>
+
+<div style="position:fixed;top:20px;left:20px;z-index:9999;">
+  <a href="index.html" style="
+    display:inline-flex;align-items:center;gap:8px;
+    padding:9px 18px;border-radius:999px;
+    border:1px solid rgba(255,255,255,.18);
+    background:rgba(15,23,42,.6);
+    color:rgba(234,242,255,.92);
+    font-size:12px;font-weight:500;
+    text-decoration:none;
+    backdrop-filter:blur(12px);
+    font-family:Inter,system-ui,sans-serif;
+    letter-spacing:.02em;
+    transition:all .2s;
+  ">← Home</a>
+</div>
+<script>
+  // Clear playhead and force fresh React state on every visit
+  try {
+    Object.keys(localStorage).forEach(function(k) {
+      if (k.indexOf(':t') !== -1) localStorage.removeItem(k);
+    });
+  } catch(e) {}
+  // If navigating back, force a true reload so React state resets
+  if (performance && performance.navigation && performance.navigation.type === 2) {
+    window.location.reload(true);
+  }
+  if (performance && performance.getEntriesByType) {
+    var nav = performance.getEntriesByType('navigation')[0];
+    if (nav && nav.type === 'back_forward') {
+      window.location.reload(true);
+    }
+  }
+</script>
+
+  <!-- ═══════════════════════════════════════════════
+       CONTENT PROTECTION — no screenshot / copy / print
+  ═══════════════════════════════════════════════════ -->
+  <style id="lp-protect">
+    html, body, * { -webkit-user-select:none!important; -moz-user-select:none!important; user-select:none!important; }
+    img { -webkit-user-drag:none; pointer-events:none; }
+    @media print { body { display:none!important; visibility:hidden!important; } }
+  </style>
+  <script id="lp-protect-js">
+  (function(){
+    document.addEventListener('contextmenu',function(e){e.preventDefault();return false;});
+    document.addEventListener('keydown',function(e){
+      var k=e.key?e.key.toLowerCase():'';
+      var c=e.ctrlKey||e.metaKey;
+      if(c&&['s','p','a','c','u'].includes(k)){e.preventDefault();return false;}
+      if(k==='printscreen'){e.preventDefault();return false;}
+      if(k==='f12'){e.preventDefault();return false;}
+      if(c&&e.shiftKey&&['i','j','c'].includes(k)){e.preventDefault();return false;}
+    });
+    document.addEventListener('dragstart',function(e){e.preventDefault();return false;});
+    var ps=document.createElement('style');
+    ps.textContent='@media print{body{display:none!important;}}';
+    document.head.appendChild(ps);
+    var shield=document.createElement('div');
+    shield.id='lp-shield';
+    shield.style.cssText='display:none;position:fixed;inset:0;z-index:99998;background:#020617;align-items:center;justify-content:center;flex-direction:column;gap:10px;';
+    shield.innerHTML='<div style="width:48px;height:48px;border-radius:50%;background:radial-gradient(circle at 30% 20%,#22d3ee,#0ea5e9 35%,#2d1b69 70%,#020617);box-shadow:0 0 40px rgba(34,211,238,.3);"></div><div style="font-family:system-ui;font-size:14px;color:#22d3ee;font-weight:700;letter-spacing:.12em;text-transform:uppercase;">LaunchPath AI</div><div style="font-family:system-ui;font-size:12px;color:rgba(255,255,255,.35);">Protected Content</div>';
+    document.body.appendChild(shield);
+    document.addEventListener('visibilitychange',function(){
+      if(document.hidden){shield.style.display='flex';}
+      else{setTimeout(function(){shield.style.display='none';},200);}
+    });
+  })();
+  </script>
+
+</body></html>
