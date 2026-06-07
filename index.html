@@ -2622,5 +2622,26 @@ if (document.getElementById("root")) {
 })();
 </script>
 
+<script>
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const ref = params.get('ref');
+  if (!ref) return;
+
+  fetch("https://formspree.io/f/mdajogpk", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      type: "Ambassador Demo Opened",
+      ambassador_ref: ref,
+      page: "Full Access Demo - Home",
+      url: window.location.href,
+      timestamp: new Date().toISOString()
+    })
+  });
+})();
+</script>
+
 </body>
 </html>
+
