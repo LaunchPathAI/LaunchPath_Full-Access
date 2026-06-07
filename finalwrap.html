@@ -1300,25 +1300,7 @@ function SceneExec({ active, studentName, score, onReplay }) {
     });
   })();
   <\/script>
-<script>
-(function() {
-  const params = new URLSearchParams(window.location.search);
-  const ref = params.get('ref');
-  if (!ref) return;
 
-  fetch("https://formspree.io/f/mdajogpk", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      type: "FinalWrap Strategy Viewed",
-      ambassador_ref: ref,
-      page: "FinalWrap - Generate My Strategy",
-      url: window.location.href,
-      timestamp: new Date().toISOString()
-    })
-  });
-})();
-</script>
 </body></html>`);
                 w.document.close();
                 setTimeout(() => w.print(), 600);
