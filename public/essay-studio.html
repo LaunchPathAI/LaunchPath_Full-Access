@@ -87,7 +87,7 @@
       display:flex; gap: 10px; flex-wrap:nowrap; align-items:center; justify-content:flex-end;
       overflow-x:auto; padding-bottom: 2px;
       scrollbar-width: thin;
-    
+
       position: sticky;
       top: 0;
       z-index: 8;
@@ -117,7 +117,7 @@
       font-weight: 700;
       box-shadow: 0 8px 24px rgba(34,211,238,.2);
     }
-    
+
     .btn.small{padding:10px 14px;font-size:14px;border-radius:14px;line-height:1;}
 
     .issueBar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
@@ -132,7 +132,7 @@
       background: rgba(12,22,32,.62);
       color: rgba(255,255,255,.92);
       font-weight: 900;
-      
+
       font-size: 12.5px;
 letter-spacing: .2px;
       cursor: pointer;
@@ -284,7 +284,7 @@ letter-spacing: .2px;
     .bottomRow{grid-template-columns: 1fr; }
       .editor{height: 420px;}
     }
-  
+
     .howStrip{
       background: #2c3a52;
       border: 1px solid #3a4b65;
@@ -887,7 +887,7 @@ mark[data-issue].sev-minor{ background:rgba(124,124,255,.14) !important; border:
       font-weight:800;
       color: #7dffd4;
     }
-    
+
 
     .baSummary{
       margin-top: 10px;
@@ -2658,12 +2658,10 @@ function lpReplaceSentence(sidx, newSentence){
         if(location.protocol === "file:"){
           applyResult(generateRewrite(sentToRewrite, issueType));
         } else {
-          fetch("https://api.anthropic.com/v1/messages", {
+          fetch("/api/rewrite", {
             method: "POST",
             headers: {
-              "Content-Type": "application/json",
-              "x-api-key": "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",
-              "anthropic-dangerous-direct-browser-access": "true"
+              "Content-Type": "application/json"
             },
             body: JSON.stringify({
               model: "claude-sonnet-4-20250514",
@@ -2891,7 +2889,7 @@ window.renderIssueList = renderIssueList;
     }
     // Reset if text has changed significantly (new essay) OR first run
     var prevText = window.__lpBeforeText || "";
-    var textChanged = text.trim().length > 0 && 
+    var textChanged = text.trim().length > 0 &&
                       Math.abs(text.trim().length - prevText.trim().length) > 50;
     if(!window.__lpStep1Ran || textChanged){
       window.__lpBeforeScore = 0;
@@ -2915,10 +2913,14 @@ window.renderIssueList = renderIssueList;
         ? "You are an experienced teacher reviewing a student's academic essay. Write a 2-3 sentence assessment in a direct, honest teacher voice. Cover: (1) whether the thesis is clear and arguable, (2) one specific strength, (3) one concrete suggestion to improve the argument or evidence. Be specific to this essay — no generic advice. Under 80 words.\n\nESSAY:\n" + text.substring(0, 1500)
         : "You are an experienced college admissions counselor reviewing a student's essay draft. Write a 2-3 sentence assessment in a warm, direct counselor voice. Cover: (1) what is working well, (2) one specific strength, (3) one actionable suggestion before submitting. Be specific to this essay — no generic advice. Under 80 words.\n\nESSAY:\n" + text.substring(0, 1500);
       if(location.protocol === "file:") return;
-      fetch("https://api.anthropic.com/v1/messages", {
+      fetch("/api/rewrite", {
         method: "POST",
-        headers: {"Content-Type":"application/json","x-api-key":"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","anthropic-dangerous-direct-browser-access":"true"},
-        body: JSON.stringify({model:"claude-sonnet-4-20250514", max_tokens:150, messages:[{role:"user",content:prompt}]})
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 150,
+          messages: [{ role: "user", content: prompt }]
+        })
       })
       .then(function(r){ return r.json(); })
       .then(function(data){
@@ -3003,7 +3005,7 @@ window.renderIssueList = renderIssueList;
     if(ta) ta.value = t;
   }
 
-  
+
 function polish(text){
   const raw = (text||"").replace(/\r\n/g,"\n").trim();
   const paras = raw.split(/\n\s*\n+/);
@@ -3074,7 +3076,7 @@ function autoParagraphize(t){
       .map(s=>s.trim()).filter(Boolean);
   }
 
-  
+
 function splitSents(t){
   return (t||"").trim().split(/(?<=[\.\!\?])\s+/).map(s=>s.trim()).filter(Boolean);
 }
@@ -3673,9 +3675,9 @@ function runStep2(){
     const mechanical = computeScore(text);
     window.__lpBeforeScore = mechanical.total;
     if(location.protocol === "file:") return;
-    fetch("https://api.anthropic.com/v1/messages", {
+    fetch("/api/rewrite", {
       method:"POST",
-      headers:{"Content-Type":"application/json","x-api-key":"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","anthropic-dangerous-direct-browser-access":"true"},
+      headers:{"Content-Type":"application/json"},
       body: JSON.stringify({
         model:"claude-sonnet-4-20250514",
         max_tokens:400,
@@ -4086,7 +4088,7 @@ ${text.substring(0, 3000)}`}]
       el.style.display = (t === key) ? "" : "none";
     });
   }
-  
+
   window.lpSetCoachTab = setTab;
   setTab("overview");
 

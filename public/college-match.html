@@ -292,8 +292,8 @@
     cursor: pointer;
   }
 
-  
-  
+
+
 .whatif-run-btn {
     margin-left: auto;
     font-size: .74rem;
@@ -962,7 +962,7 @@
             </div>
           </div>
 
-          
+
 
 <div class="panel-header-line">
             <div class="panel-title">Top Match Set (sample)</div>
@@ -1159,7 +1159,7 @@
                 <a href="#" class="cta-link">View details</a>
               </div>
             </article>
-          
+
 <!-- Additional East Coast matches -->
 <article class="college-card">
   <div class="college-header-row">
@@ -1818,7 +1818,7 @@
 </article>
 
 
-          
+
 
             <article class="college-card">
               <div class="college-header-row">
@@ -3590,15 +3590,11 @@
 <script>
 
 // ── College Scorecard API Integration ─────────────────────
-// Replace YOUR_API_KEY_HERE with your api.data.gov key
-var LP_SCORECARD_API_KEY = "YOUR_API_KEY_HERE";
-var LP_API_ENABLED = (LP_SCORECARD_API_KEY !== "YOUR_API_KEY_HERE");
-
 function lpFetchColleges(gpa, sat, geo) {
   var grid = document.querySelector('.college-grid');
   if (!grid) return;
   grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:48px;color:#c2c7d1;font-size:1rem;">🔍 Finding your matches from 6,000+ colleges…</div>';
-  var params = new URLSearchParams({ api_key: LP_SCORECARD_API_KEY, per_page: 100 });
+  var params = new URLSearchParams({ per_page: 100 });
   params.append('fields', 'school.name,school.state,school.city,school.ownership,school.region_id,latest.admissions.admission_rate.overall,latest.admissions.sat_scores.25th_percentile.critical_reading,latest.admissions.sat_scores.25th_percentile.math,latest.admissions.sat_scores.75th_percentile.critical_reading,latest.admissions.sat_scores.75th_percentile.math,latest.cost.avg_net_price.public,latest.cost.avg_net_price.private,latest.cost.tuition.out_of_state');
   params.append('latest.student.size__range', '1000..');
   params.append('latest.admissions.sat_scores.25th_percentile.critical_reading__range', '200..');
@@ -3610,9 +3606,9 @@ function lpFetchColleges(gpa, sat, geo) {
   }
   var geoMap = {northeast:'1,2',southeast:'3',midwest:'4,5',southwest:'6',west:'7,8,9'};
   if (geo && geo !== 'all' && geoMap[geo]) params.append('school.region_id', geoMap[geo]);
-  fetch('https://api.data.gov/ed/collegescorecard/v1/schools.json?' + params.toString())
-    .then(function(r){ return r.json(); })
-    .then(function(data){
+  fetch('/api/colleges?' + params.toString())
+          .then(function(r){ return r.json(); })
+          .then(function(data){
       var schools = data && data.results ? data.results : [];
       if (!schools.length) { grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#c2c7d1;">No matches found. Try adjusting your filters.</div>'; return; }
       var regionMap = {0:'all',1:'northeast',2:'northeast',3:'southeast',4:'midwest',5:'midwest',6:'southwest',7:'west',8:'west',9:'west'};
@@ -6948,7 +6944,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  
+
   function lpResetFitScores() {
     document.querySelectorAll('.college-card .fit-score-pill').forEach(function(pill) {
       var dot = pill.querySelector('.fit-score-pill-dot');
@@ -7328,7 +7324,7 @@ function lpResetWhatIf() {
   document.addEventListener('DOMContentLoaded', function() {
     lpInitCardData();
 
-    
+
     // Demo start state: no results shown until the student clicks Search
     var cards = document.querySelectorAll('.college-card');
     cards.forEach(function(card) {
