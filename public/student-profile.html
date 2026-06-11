@@ -4,6 +4,14 @@
   <meta charset="UTF-8" />
   <title>LaunchPath AI – Create Your Profile</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Create your LaunchPath AI student profile and unlock AI-powered college planning tools." />
+
+  <!-- Shared config -->
+  <script src="config.js"></script>
+  <!-- Stripe config -->
+  <script src="stripe-config.js"></script>
+  <!-- Supabase JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.50.0/dist/umd/supabase.js"></script>
   <style>
     :root {
       --bg-main: #020617;
@@ -187,7 +195,16 @@
     }
     .btn-secondary:hover { border-color: rgba(148,163,184,.6); color: var(--text-main); }
 
-    /* ── SUCCESS BANNER ── */
+    /* ── ERROR / SUCCESS BANNERS ── */
+    .error-banner {
+      display: none;
+      background: rgba(239,68,68,.1);
+      border: 1px solid rgba(239,68,68,.35);
+      border-radius: 14px; padding: 12px 16px;
+      font-size: .87rem; color: #fca5a5;
+      margin-bottom: 16px;
+    }
+    .error-banner.visible { display: block; }
     .success-banner {
       display: none;
       background: rgba(34,197,94,.1);
@@ -197,6 +214,9 @@
       margin-top: 16px; align-items: center; gap: 10px;
     }
     .success-banner.visible { display: flex; }
+    .pw-hint {
+      font-size: .75rem; color: #4b5563; margin-top: 5px;
+    }
 
     /* ── SIGN IN LINK ── */
     .signin-row {
@@ -294,6 +314,14 @@
           <div class="hint">This is your login email. Keep it accessible.</div>
         </div>
 
+        <div class="field">
+          <label for="password">Create a password</label>
+          <input id="password" type="password" placeholder="Min 8 characters" autocomplete="new-password" required minlength="8" />
+          <div class="pw-hint">At least 8 characters. You'll use this to sign in.</div>
+        </div>
+
+        <div id="errorBanner" class="error-banner"></div>
+
         <div class="row">
           <div class="field">
             <label for="grade">
@@ -332,7 +360,7 @@
         </div>
 
         <div class="btn-row">
-          <button class="btn-primary" type="submit">Save Profile &amp; Get Started →</button>
+          <button class="btn-primary" type="submit" id="submitBtn">Create Account &amp; Continue to Payment →</button>
           <a class="btn-secondary" href="student-login.html">Already have an account</a>
         </div>
 
@@ -363,37 +391,102 @@
   </div>
 
   <script>
-    /* Form always starts blank — pre-fill removed so fields don't carry across visits. */
+    // ── Supabase client ──────────────────────────────────────
+    const _supabase = supabase.createClient(
+      LP_CONFIG.SUPABASE_URL,
+      LP_CONFIG.SUPABASE_ANON_KEY
+    );
 
-    /* ── Form submission ── */
-    document.getElementById('profileForm').addEventListener('submit', function(e) {
+
+    const submitBtn  = document.getElementById('submitBtn');
+    const errorBox   = document.getElementById('errorBanner');
+
+    function showError(msg) {
+      errorBox.textContent = msg;
+      errorBox.classList.add('visible');
+    }
+    function hideError() {
+      errorBox.classList.remove('visible');
+    }
+    function setLoading(on) {
+      submitBtn.disabled = on;
+      submitBtn.textContent = on
+        ? 'Creating account…'
+        : 'Create Account & Continue to Payment →';
+    }
+
+    // ── Form submission ──────────────────────────────────────
+    document.getElementById('profileForm').addEventListener('submit', async function(e) {
       e.preventDefault();
+      hideError();
 
-      const user = {
-        firstName: document.getElementById('firstName').value.trim(),
-        lastName: document.getElementById('lastName').value.trim(),
-        email: document.getElementById('email').value.trim(),
-        grade: document.getElementById('grade').value,
-        highSchool: document.getElementById('highSchool').value.trim(),
-        gpa: document.getElementById('gpa').value.trim(),
-        sat: document.getElementById('sat').value.trim(),
-        act: document.getElementById('act').value.trim()
-      };
+      const firstName = document.getElementById('firstName').value.trim();
+      const email     = document.getElementById('email').value.trim();
+      const password  = document.getElementById('password').value;
 
-      if (!user.firstName || !user.email) {
-        document.getElementById('firstName').focus();
+      if (!firstName || !email) {
+        showError('Please fill in your first name and email.');
+        return;
+      }
+      if (password.length < 8) {
+        showError('Password must be at least 8 characters.');
         return;
       }
 
-      localStorage.setItem('lp_student_user', JSON.stringify(user));
+      setLoading(true);
 
-      const banner = document.getElementById('successBanner');
-      banner.classList.add('visible');
+      try {
+        // 1. Create Supabase account
+        const { data, error } = await _supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              first_name: firstName,
+              last_name:  document.getElementById('lastName').value.trim(),
+              grade:      document.getElementById('grade').value,
+              high_school:document.getElementById('highSchool').value.trim(),
+              gpa:        document.getElementById('gpa').value.trim(),
+              sat:        document.getElementById('sat').value.trim(),
+              act:        document.getElementById('act').value.trim()
+            }
+          }
+        });
 
-      setTimeout(function() {
-        window.location.href = 'checkout.html'; // Stripe checkout — student pays $25/month
-      }, 800);
+
+        if (error) {
+          if (error.message.toLowerCase().includes('already registered')) {
+            showError('An account with this email already exists. Sign in instead.');
+          } else {
+            showError(error.message);
+          }
+          setLoading(false);
+          return;
+        }
+
+        // 2. Show success banner
+        const banner = document.getElementById('successBanner');
+        banner.classList.add('visible');
+
+        // 3. Redirect to checkout page
+        setTimeout(function() {
+          window.location.href = 'checkout.html';
+        }, 800);
+
+      } catch (err) {
+        showError('Something went wrong. Please try again.');
+        setLoading(false);
+      }
     });
+
+    // ── If already signed in + paid, skip straight to workspace ──
+    (async function() {
+      const { data: { session } } = await _supabase.auth.getSession();
+      if (!session) return;
+      const { data: profile } = await _supabase
+        .from('profiles').select('is_paid').eq('id', session.user.id).single();
+      if (profile?.is_paid) window.location.href = LP_CONFIG.WORKSPACE_URL;
+    })();
   </script>
 
 

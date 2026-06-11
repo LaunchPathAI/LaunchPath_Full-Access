@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Payment Successful — LaunchPath AI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Your LaunchPath AI payment was successful. Setting up your workspace..." />
+
+  <!-- Shared config -->
+  <script src="config.js"></script>
+  <!-- Supabase JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.50.0/dist/umd/supabase.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    :root {
+      --bg: #020617;
+      --card: #0b1220;
+      --accent: #22d3ee;
+      --accent2: #a855f7;
+      --green: #4ade80;
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --border: #1f2937;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: radial-gradient(circle at 20% 20%, #1a1040 0%, #020617 50%, #000 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: 56px 48px;
+      text-align: center;
+      max-width: 480px;
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 28px;
+      background: linear-gradient(135deg, rgba(34, 211, 238, .06), rgba(168, 85, 247, .06));
+      pointer-events: none;
+    }
+
+    /* ── BRAND ── */
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 40px;
+    }
+
+    .brand-dot {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 25%, #22d3ee, #0ea5e9 40%, #6d28d9 70%, #020617);
+      box-shadow: 0 0 24px rgba(34, 211, 238, .35);
+    }
+
+    .brand-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      background: linear-gradient(90deg, #22d3ee, #a855f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* ── STATES ── */
+    .state {
+      display: none;
+    }
+
+    .state.active {
+      display: block;
+    }
+
+    /* ── PROCESSING STATE ── */
+    .spinner-wrap {
+      margin: 0 auto 28px;
+      width: 80px;
+      height: 80px;
+      position: relative;
+    }
+
+    .spinner-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      animation: spin 1.2s linear infinite;
+    }
+
+    .spinner-ring:nth-child(1) {
+      border-top-color: var(--accent);
+      animation-duration: 1s;
+    }
+
+    .spinner-ring:nth-child(2) {
+      border-right-color: var(--accent2);
+      animation-duration: 1.6s;
+      animation-direction: reverse;
+      inset: 8px;
+    }
+
+    .spinner-ring:nth-child(3) {
+      border-bottom-color: var(--accent);
+      animation-duration: 2s;
+      inset: 16px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .state-title {
+      font-size: 1.45rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .state-sub {
+      font-size: .9rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ── PROGRESS DOTS ── */
+    .dots {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 28px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background .3s;
+    }
+
+    .dot.done {
+      background: var(--accent);
+      box-shadow: 0 0 8px rgba(34, 211, 238, .5);
+    }
+
+    .dot.active {
+      background: var(--accent2);
+      animation: pulse-dot .8s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1)
+      }
+
+      50% {
+        opacity: .6;
+        transform: scale(.8)
+      }
+    }
+
+    /* ── SUCCESS STATE ── */
+    .success-icon {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(74, 222, 128, .15), rgba(34, 211, 238, .1));
+      border: 2px solid rgba(74, 222, 128, .4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 28px;
+      animation: pop-in .5s cubic-bezier(.34, 1.56, .64, 1) both;
+      font-size: 2.2rem;
+    }
+
+    @keyframes pop-in {
+      from {
+        opacity: 0;
+        transform: scale(.4);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    /* ── TIMEOUT STATE ── */
+    .timeout-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: rgba(251, 191, 36, .08);
+      border: 2px solid rgba(251, 191, 36, .3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      margin: 0 auto 24px;
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-block;
+      margin-top: 28px;
+      padding: 14px 32px;
+      border-radius: 50px;
+      font-size: .95rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all .2s;
+      border: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #22d3ee, #a855f7);
+      color: #fff;
+      box-shadow: 0 8px 24px rgba(34, 211, 238, .25);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(34, 211, 238, .35);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      font-size: .85rem;
+      padding: 10px 24px;
+    }
+
+    .btn-outline:hover {
+      border-color: rgba(148, 163, 184, .5);
+      color: var(--text);
+    }
+
+    /* ── STEPS ── */
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 28px;
+      text-align: left;
+    }
+
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, .03);
+      font-size: .84rem;
+      color: var(--muted);
+      transition: all .4s;
+    }
+
+    .step.done {
+      color: var(--text);
+      background: rgba(74, 222, 128, .06);
+    }
+
+    .step-icon {
+      font-size: 1rem;
+      width: 20px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .step-spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(34, 211, 238, .2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    /* ── REDIRECT NOTICE ── */
+    .redirect-notice {
+      margin-top: 20px;
+      font-size: .78rem;
+      color: var(--muted);
+    }
+
+    /* ── CONFETTI ── */
+    .confetti-container {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 10;
+    }
+
+    .confetti-piece {
+      position: absolute;
+      top: -10px;
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      animation: fall linear forwards;
+    }
+
+    @keyframes fall {
+      to {
+        transform: translateY(110vh) rotate(720deg);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Confetti container -->
+  <div class="confetti-container" id="confetti"></div>
+
+  <div class="card">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <span class="brand-name">LaunchPath AI</span>
+    </div>
+
+    <!-- ── STATE: Processing ── -->
+    <div class="state active" id="stateProcessing">
+      <div class="spinner-wrap">
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+      </div>
+      <div class="state-title">Setting up your workspace…</div>
+      <div class="state-sub">Your payment was received. We're unlocking your full access now.</div>
+
+      <div class="steps" id="stepList">
+        <div class="step done" id="step1">
+          <span class="step-icon">✓</span>
+          <span>Payment confirmed by Stripe</span>
+        </div>
+        <div class="step" id="step2">
+          <div class="step-spinner"></div>
+          <span>Activating your account…</span>
+        </div>
+        <div class="step" id="step3">
+          <span class="step-icon">○</span>
+          <span>Unlocking all tools</span>
+        </div>
+      </div>
+
+      <div class="dots">
+        <div class="dot done" id="d1"></div>
+        <div class="dot active" id="d2"></div>
+        <div class="dot" id="d3"></div>
+      </div>
+    </div>
+
+    <!-- ── STATE: Success ── -->
+    <div class="state" id="stateSuccess">
+      <div class="success-icon">🎉</div>
+      <div class="state-title" style="color:#4ade80;">You're in!</div>
+      <div class="state-sub">Full access unlocked. Welcome to LaunchPath AI — your AI college planning command centre.
+      </div>
+      <a href="student-workplace.html" class="btn btn-primary" id="workspaceBtn">Go to My Workspace →</a>
+      <div class="redirect-notice">Redirecting automatically in <span id="countdown">3</span>s…</div>
+    </div>
+
+    <!-- ── STATE: Timeout ── -->
+    <div class="state" id="stateTimeout">
+      <div class="timeout-icon">⏳</div>
+      <div class="state-title">Taking a bit longer…</div>
+      <div class="state-sub">Your payment went through! Our system is still processing. Try refreshing in a moment.
+      </div>
+      <button class="btn btn-primary" onclick="location.reload()">Refresh Page</button>
+      <br />
+      <a href="mailto:support@launchpathai.com" class="btn btn-outline" style="margin-top:12px;">Contact Support</a>
+    </div>
+
+  </div>
+
+  <script>
+    const _supabase = supabase.createClient(
+      LP_CONFIG.SUPABASE_URL,
+      LP_CONFIG.SUPABASE_ANON_KEY
+    );
+
+    // ── Helpers ──────────────────────────────────────────
+    function showState(id) {
+      ['stateProcessing', 'stateSuccess', 'stateTimeout'].forEach(function (s) {
+        document.getElementById(s).classList.remove('active');
+      });
+      document.getElementById(id).classList.add('active');
+    }
+
+    function markStep(stepId, icon) {
+      var el = document.getElementById(stepId);
+      el.classList.add('done');
+      el.querySelector('.step-spinner') && (el.querySelector('.step-spinner').outerHTML = '<span class="step-icon">' + icon + '</span>');
+      el.querySelector('.step-icon') && (el.querySelector('.step-icon').textContent = icon);
+    }
+
+    function activateStep(stepId) {
+      var el = document.getElementById(stepId);
+      // Replace static icon with spinner
+      var icon = el.querySelector('.step-icon');
+      if (icon) icon.outerHTML = '<div class="step-spinner"></div>';
+    }
+
+    function launchConfetti() {
+      var colors = ['#22d3ee', '#a855f7', '#4ade80', '#f59e0b', '#f87171'];
+      var container = document.getElementById('confetti');
+      for (var i = 0; i < 60; i++) {
+        (function (i) {
+          setTimeout(function () {
+            var piece = document.createElement('div');
+            piece.className = 'confetti-piece';
+            piece.style.left = Math.random() * 100 + 'vw';
+            piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+            piece.style.width = (6 + Math.random() * 8) + 'px';
+            piece.style.height = (6 + Math.random() * 8) + 'px';
+            piece.style.borderRadius = Math.random() > .5 ? '50%' : '2px';
+            piece.style.animationDuration = (1.5 + Math.random() * 2) + 's';
+            piece.style.animationDelay = '0s';
+            container.appendChild(piece);
+            setTimeout(function () { piece.remove(); }, 4000);
+          }, i * 40);
+        })(i);
+      }
+    }
+
+    function showSuccess() {
+      markStep('step2', '✓');
+      markStep('step3', '✓');
+      document.getElementById('d2').classList.remove('active');
+      document.getElementById('d2').classList.add('done');
+      document.getElementById('d3').classList.add('done');
+
+      setTimeout(function () {
+        launchConfetti();
+        showState('stateSuccess');
+
+        // Countdown + auto redirect
+        var secs = 3;
+        var timer = setInterval(function () {
+          secs--;
+          var el = document.getElementById('countdown');
+          if (el) el.textContent = secs;
+          if (secs <= 0) {
+            clearInterval(timer);
+            window.location.href = LP_CONFIG.WORKSPACE_URL;
+          }
+        }, 1000);
+      }, 600);
+    }
+
+    // ── Main: poll is_paid ──────────────────────────────
+    (async function () {
+      // 1. Check session
+      var sessionRes = await _supabase.auth.getSession();
+      var session = sessionRes.data.session;
+
+      if (!session) {
+        // No session — redirect to login
+        window.location.href = LP_CONFIG.SIGNIN_URL;
+        return;
+      }
+
+      var userId = session.user.id;
+      var attempts = 0;
+      var maxAttempts = 20; // 20 × 3s = 60s max
+
+      // 2. Poll every 3 seconds
+      var poll = setInterval(async function () {
+        attempts++;
+
+        // Activate step 3 on attempt 3
+        if (attempts === 3) {
+          markStep('step2', '✓');
+          activateStep('step3');
+        }
+
+        try {
+          var res = await _supabase
+            .from('profiles')
+            .select('is_paid')
+            .eq('id', userId)
+            .single();
+
+          if (res.data && res.data.is_paid) {
+            clearInterval(poll);
+            showSuccess();
+            return;
+          }
+        } catch (err) {
+          // Keep polling
+        }
+
+        if (attempts >= maxAttempts) {
+          clearInterval(poll);
+          showState('stateTimeout');
+        }
+      }, 3000);
+
+      // 3. First check immediately (webhook might already be done)
+      var immediate = await _supabase
+        .from('profiles')
+        .select('is_paid')
+        .eq('id', userId)
+        .single();
+
+      if (immediate.data && immediate.data.is_paid) {
+        clearInterval(poll);
+        showSuccess();
+      }
+    })();
+  </script>
+
+</body>
+
+</html>

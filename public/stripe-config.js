@@ -1,35 +1,20 @@
 // ═══════════════════════════════════════════════════════
 //  LaunchPath AI — Stripe Configuration
-//  Replace placeholder values with your real Stripe keys
 //  from dashboard.stripe.com
 // ═══════════════════════════════════════════════════════
 
 const LP_STRIPE = {
 
-  // ── KEYS ──────────────────────────────────────────────
-  // Publishable key: starts with pk_live_ or pk_test_
-  // Found in: Stripe Dashboard → Developers → API Keys
-  publishableKey: 'pk_live_REPLACE_WITH_YOUR_PUBLISHABLE_KEY',
+  // ── PAYMENT LINK ──────────────────────────────────────
+  // Hosted Stripe Payment Link for $25/month
+  // Found in: Stripe Dashboard → Payment Links
+  // After signup, user is redirected here with ?client_reference_id=USER_ID
+  //
+  // IMPORTANT: Set the success redirect URL inside the Stripe Dashboard
+  //   Payment Link → Edit → After payment → Redirect to: payment-success.html
+  //
+  // TEST:  https://buy.stripe.com/test_XXXXXXXX
+  // LIVE:  https://buy.stripe.com/XXXXXXXX
+  checkoutUrl: 'https://buy.stripe.com/test_14A00j2u12H6dRk2Ae8Vi00',
 
-  // ── PRICE ID ──────────────────────────────────────────
-  // Your $25/month recurring price ID: starts with price_
-  // To create: Stripe Dashboard → Products → Add Product
-  //   Name: LaunchPath AI Student Subscription
-  //   Price: $25.00 USD / month (recurring)
-  //   Copy the Price ID and paste below
-  priceId: 'price_REPLACE_WITH_YOUR_PRICE_ID',
-
-  // ── URLS ──────────────────────────────────────────────
-  // Where Stripe sends the student after successful payment
-  successUrl: 'https://YOURSITE.github.io/success.html?session_id={CHECKOUT_SESSION_ID}',
-
-  // Where Stripe sends the student if they cancel checkout
-  cancelUrl: 'https://YOURSITE.github.io/student-profile.html',
-
-  // ── PRODUCT INFO ──────────────────────────────────────
-  productName: 'LaunchPath AI',
-  productDescription: 'Full access — College Match, Essay Studio, ROI Calculator, Scattergram, Social Studio & LP Guide',
-  amount: 2500, // in cents = $25.00
-  currency: 'usd',
-  interval: 'month'
 };

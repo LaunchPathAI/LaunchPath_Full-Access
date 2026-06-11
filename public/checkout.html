@@ -4,8 +4,9 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>LaunchPath AI — Subscribe</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.50.0/dist/umd/supabase.js"></script>
   <script src="stripe-config.js"></script>
-  <script src="https://js.stripe.com/v3/"></script>
   <style>
     :root{
       --bg:#020617;
@@ -106,10 +107,7 @@
 
     <div id="errorMsg" class="error-msg">Something went wrong. Please try again.</div>
 
-    <div class="field">
-      <label for="student-email">Your email address</label>
-      <input id="student-email" type="email" placeholder="you@email.com" autocomplete="email"/>
-    </div>
+
 
     <button class="btn-checkout" id="checkoutBtn" onclick="startCheckout()">
       <div class="spinner"></div>
@@ -122,56 +120,31 @@
     </div>
   </div>
 
-  <div class="back-link">
-    Already have an account? <a href="student-login.html">Sign in →</a>
-  </div>
+
 
 <script>
+// Initialize Supabase
+const _supabase = supabase.createClient(LP_CONFIG.SUPABASE_URL, LP_CONFIG.SUPABASE_ANON_KEY);
+
 async function startCheckout() {
-  const email = document.getElementById('student-email').value.trim();
   const btn = document.getElementById('checkoutBtn');
   const err = document.getElementById('errorMsg');
 
   err.classList.remove('show');
-
-  if (!email || !email.includes('@')) {
-    err.textContent = 'Please enter a valid email address.';
-    err.classList.add('show');
-    return;
-  }
-
-  // Show loading state
   btn.classList.add('loading');
   btn.disabled = true;
 
   try {
-    const stripe = Stripe(LP_STRIPE.publishableKey);
+    const { data: { session }, error } = await _supabase.auth.getSession();
+    
+    if (error || !session) {
+      // User is not logged in, shouldn't be here
+      window.location.href = 'student-login.html';
+      return;
+    }
 
-    // ── OPTION A: Stripe Checkout (recommended — hosted by Stripe) ──
-    // Requires a backend endpoint to create the session server-side
-    // Your dev will implement POST /create-checkout-session
-    // Uncomment when backend is ready:
-    /*
-    const response = await fetch('/create-checkout-session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email,
-        priceId: LP_STRIPE.priceId
-      })
-    });
-    const session = await response.json();
-    await stripe.redirectToCheckout({ sessionId: session.id });
-    */
-
-    // ── OPTION B: Stripe Payment Link (no backend needed) ──
-    // Create a Payment Link in Stripe Dashboard → Payment Links
-    // Set price to $25/month recurring, paste URL below
-    // This works without any backend — simplest for launch
-    const PAYMENT_LINK = 'https://buy.stripe.com/REPLACE_WITH_YOUR_PAYMENT_LINK';
-
-    // Append email as prefill param so Stripe pre-fills it
-    const url = `${PAYMENT_LINK}?prefilled_email=${encodeURIComponent(email)}`;
+    // Redirect to Stripe with client_reference_id
+    const url = `${LP_STRIPE.checkoutUrl}?client_reference_id=${session.user.id}&prefilled_email=${encodeURIComponent(session.user.email)}`;
     window.location.href = url;
 
   } catch(e) {
@@ -181,11 +154,6 @@ async function startCheckout() {
     btn.disabled = false;
   }
 }
-
-// Allow Enter key to submit
-document.getElementById('student-email').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') startCheckout();
-});
 </script>
 
 </body>
