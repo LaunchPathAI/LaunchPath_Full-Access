@@ -7202,6 +7202,7 @@ function lpRecomputeSummaryCounts() {
       return;
     }
 
+    LP_API_ENABLED = true
     // API hook - fires if key is set, otherwise uses static cards
     if (LP_API_ENABLED) {
       lpFetchColleges(isNaN(gpa) ? 0 : gpa, isNaN(sat) ? 0 : sat, geoFilter);
