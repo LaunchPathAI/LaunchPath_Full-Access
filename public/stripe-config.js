@@ -15,6 +15,7 @@ const LP_STRIPE = {
   //
   // TEST:  https://buy.stripe.com/test_XXXXXXXX
   // LIVE:  https://buy.stripe.com/XXXXXXXX
-  checkoutUrl: 'https://buy.stripe.com/test_14A00j2u12H6dRk2Ae8Vi00',
+
+  checkoutUrl: 'https://buy.stripe.com/aFa3cvgkRgxW9B47Uy8Vi01',
 
 };
