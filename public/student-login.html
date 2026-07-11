@@ -519,7 +519,7 @@
       }
 
       const { error } = await _supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/student-login.html'
+        redirectTo: window.location.origin + '/update-password.html'
       });
 
       if (error) {
