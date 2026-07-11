@@ -10,6 +10,14 @@
   if (session) {
     const updateButtons = () => {
       const signinLinks = document.querySelectorAll('a[href="student-login.html"], .signin');
+      const workspaceBtn = document.getElementById('navWorkspaceBtn');
+      if (workspaceBtn) {
+        workspaceBtn.style.display = '';
+      }
+      const askLpBtn = document.getElementById('navAskLpBtn');
+      if (askLpBtn) {
+        askLpBtn.style.display = '';
+      }
       signinLinks.forEach(link => {
         link.textContent = 'Sign Out';
         link.href = '#';

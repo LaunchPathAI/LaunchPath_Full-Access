@@ -503,7 +503,6 @@
     .editor {
       height: 500px;
     }
-    }
 
     .howStrip {
       background: #2c3a52;
@@ -589,7 +588,6 @@
       grid-template-columns: 1.35fr .85fr;
       gap: 14px;
       align-items: start;
-    }
     }
 
     .coachCard .hRow {
@@ -4598,7 +4596,41 @@
       window.lpRunApiIssueReview = async function lpRunApiIssueReview(essayText) {
         const essay = String(essayText || "").trim();
         if (!essay || essay.length < 100) return null;
-        const prompt = `You are a senior college admissions essay counselor. Review this student's essay and identify the highest-priority sentence-level issues.
+        const isAcademicMode = (window.lpMode === 'academic');
+        const prompt = isAcademicMode
+          ? `You are an experienced teacher reviewing a student's academic essay. Identify the highest-priority sentence-level issues that weaken the argument, evidence, or clarity.
+
+Return ONLY valid JSON in this exact shape:
+{
+  "issues": [
+    {
+      "severity": "red|amber|minor",
+      "type": "Thesis|Evidence|Structure|Clarity|Tone|Grammar|Wording|Depth",
+      "original_sentence": "exact sentence copied from the essay",
+      "why": "one concise teacher explanation focused on argument quality",
+      "replacement_sentence": "one improved sentence that strengthens the argument, evidence, or clarity",
+      "confidence": 0.0
+    }
+  ]
+}
+
+Rules:
+- Return 6 to 10 issues maximum, prioritized by academic impact. Never return more than 10.
+- Always audit the thesis / opening claim. If it is vague, descriptive rather than arguable, or missing, flag it as a Thesis issue.
+- Always audit the conclusion. If it merely restates the intro without synthesis, flag it as a Structure issue.
+- Flag unsupported claims — assertions made without evidence, examples, or citations.
+- Flag informal language or tone (stuff, kind of, basically, literally) as Tone issues.
+- Flag passive voice where active voice would strengthen the argument.
+- The original_sentence MUST be copied exactly from the essay so the UI can highlight it.
+- The replacement_sentence must actually fix the issue. For Thesis issues, rewrite to make an arguable claim. For Evidence issues, show how the sentence should introduce or frame evidence.
+- Do not invent facts, quotes, or examples not already in the essay.
+- Do not rewrite the full essay. One sentence at a time.
+- Keep a credible student voice — do not over-formalize.
+- Before final JSON, verify every replacement_sentence is stronger and would make sense pasted directly into the essay.
+
+ESSAY:
+${essay.substring(0, 5000)}`
+          : `You are a senior college admissions essay counselor. Review this student's essay and identify the highest-priority sentence-level issues.
 
 Return ONLY valid JSON in this exact shape:
 {
@@ -5431,11 +5463,13 @@ ${essay.substring(0, 5000)}`;
 
         const total = clamp(thesisClarity + argStructure + evidence + clarity + grammar, 0, 100);
 
-        // Map to scorecard UI fields
+        // Map academic rubric to the 25-point scorecard UI fields.
+        // Academic raw categories are Thesis 25, Argument 20, Evidence 20, Clarity 20.
+        // The visible bars all expect 0-25, so 20-point categories must be normalized.
         return {
-          structure: argStructure,
-          clarity: Math.round(clarity / 2), // scale to 25pt display
-          voice: evidence,
+          structure: Math.round(argStructure / 20 * 25),
+          clarity: Math.round(clarity / 20 * 25),
+          voice: Math.round(evidence / 20 * 25),
           specificity: thesisClarity,
           total, w, longSents, passiveCount, vagueCount: 0, clicheCount,
           // Academic-specific labels for UI
@@ -5564,12 +5598,22 @@ ${essay.substring(0, 5000)}`;
 
         const mechanical = computeScore(text);
         // Local/fallback category scores so the four rows never stay blank.
-        updateScorecard25({
-          structure: Math.round((mechanical.cohesion || mechanical.structure || 0) / 15 * 25),
-          clarity: Math.round((mechanical.clarity || 0) / 10 * 25),
-          voice: Math.round(((mechanical.authenticity || 0) + (mechanical.originality || 0)) / 30 * 25),
-          specificity: Math.round(mechanical.reflectionDepth || mechanical.specificity || 0)
-        });
+        // Academic Mode already returns normalized 0-25 values for the visible bars.
+        if (mechanical && mechanical._academic) {
+          updateScorecard25({
+            structure: mechanical.structure,
+            clarity: mechanical.clarity,
+            voice: mechanical.voice,
+            specificity: mechanical.specificity
+          });
+        } else {
+          updateScorecard25({
+            structure: Math.round((mechanical.cohesion || mechanical.structure || 0) / 15 * 25),
+            clarity: Math.round((mechanical.clarity || 0) / 10 * 25),
+            voice: Math.round(((mechanical.authenticity || 0) + (mechanical.originality || 0)) / 30 * 25),
+            specificity: Math.round(mechanical.reflectionDepth || mechanical.specificity || 0)
+          });
+        }
 
         // Preserve the locked Step 1 baseline score. If it is not locked yet, normal scorer may set it.
         if (!window.__lpBeforeScoreLocked) {
@@ -5583,14 +5627,25 @@ ${essay.substring(0, 5000)}`;
         }
 
         if (location.protocol === "file:") return;
-        fetch("/api/rewrite", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "claude-sonnet-4-6",
-            max_tokens: 400,
-            messages: [{
-              role: "user", content: `You are an experienced college admissions reader. Score this essay on these dimensions. Be honest and critical — most essays score 50-75, not 80+. Only exceptional essays score above 80.
+        const _apiScoreIsAcademic = (window.lpMode === 'academic');
+        const _apiScorePrompt = _apiScoreIsAcademic
+          ? `You are an experienced teacher scoring a student's academic essay. Be honest and critical — most essays score 55-75, not 80+. Only genuinely strong essays score above 80.
+
+Scoring rubric (total = 100):
+- Thesis Clarity (0-25): Is the central argument clear, specific, and arguable — not just a topic statement?
+- Argument Structure (0-20): Are paragraphs logically organized? Does each paragraph support the thesis?
+- Evidence & Support (0-20): Are claims backed with examples, quotes, or data? Is evidence integrated well?
+- Clarity & Readability (0-20): Are sentences clear and appropriately formal? Minimal passive voice and run-ons?
+- Grammar & Mechanics (0-15): Spelling, punctuation, subject-verb agreement, formal tone maintained?
+
+Return ONLY valid JSON, no other text:
+{"reflection":N,"originality":N,"memorability":N,"cohesion":N,"authenticity":N,"clarity":N,"grammar":N,"total":N,"oneline":"one honest sentence about the essay's biggest strength or weakness"}
+
+Note: map your scores as follows for the JSON keys — thesis=reflection, structure=cohesion, evidence=originality, readability=authenticity, grammar=grammar, clarity=clarity. Set memorability=0.
+
+Essay:
+${text.substring(0, 3000)}`
+          : `You are an experienced college admissions reader. Score this essay on these dimensions. Be honest and critical — most essays score 50-75, not 80+. Only exceptional essays score above 80.
 
 Scoring rubric (total = 100):
 - Reflection Depth (0-25): Does the student show genuine insight beyond describing events? Does something actually change in their thinking?
@@ -5605,8 +5660,14 @@ Return ONLY valid JSON, no other text:
 {"reflection":N,"originality":N,"memorability":N,"cohesion":N,"authenticity":N,"clarity":N,"grammar":N,"total":N,"oneline":"one honest sentence about the essay's biggest strength or weakness"}
 
 Essay:
-${text.substring(0, 3000)}`
-            }]
+${text.substring(0, 3000)}`;
+        fetch("/api/rewrite", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-6",
+            max_tokens: 400,
+            messages: [{ role: "user", content: _apiScorePrompt }]
           })
         })
           .then(r => r.json())
@@ -5628,12 +5689,24 @@ ${text.substring(0, 3000)}`
               window.__lpBeforeScore = window.__lpStep1BaselineScore;
             }
 
-            updateScorecard25({
-              structure: Math.round((Number(s.cohesion) || 0) / 15 * 25),
-              clarity: Math.round((Number(s.clarity) || 0) / 10 * 25),
-              voice: Math.round(((Number(s.authenticity) || 0) + (Number(s.originality) || 0)) / 30 * 25),
-              specificity: Math.round(Number(s.reflection) || 0)
-            });
+            if (_apiScoreIsAcademic) {
+              const academicReadability = Number.isFinite(Number(s.authenticity))
+                ? Number(s.authenticity)
+                : Number(s.clarity);
+              updateScorecard25({
+                structure: Math.round((Number(s.cohesion) || 0) / 20 * 25),
+                clarity: Math.round((Number(academicReadability) || 0) / 20 * 25),
+                voice: Math.round((Number(s.originality) || 0) / 20 * 25),
+                specificity: Math.round(Number(s.reflection) || 0)
+              });
+            } else {
+              updateScorecard25({
+                structure: Math.round((Number(s.cohesion) || 0) / 15 * 25),
+                clarity: Math.round((Number(s.clarity) || 0) / 10 * 25),
+                voice: Math.round(((Number(s.authenticity) || 0) + (Number(s.originality) || 0)) / 30 * 25),
+                specificity: Math.round(Number(s.reflection) || 0)
+              });
+            }
 
             if (s.oneline) {
               const el = document.getElementById("lpApiOneline");
