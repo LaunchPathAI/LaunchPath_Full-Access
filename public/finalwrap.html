@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LaunchPath AI — Executive Summary</title>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+<style>
+    html, body, #root { height: 100%; margin: 0; padding: 0; background: #020617; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      color: #f3f4f6;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Cinematic timing curves */
+    :root {
+      --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    }
+
+    /* Display type — calm + tight tracking */
+    .display {
+      font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      font-weight: 200;
+      letter-spacing: -0.04em;
+      font-feature-settings: "tnum" 1;
+    }
+    .display-bold {
+      font-weight: 600;
+      letter-spacing: -0.045em;
+    }
+    .micro {
+      font-family: "SF Mono", ui-monospace, "Menlo", monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+    .label-tiny {
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    /* Scene base — fade between scenes */
+    .scene {
+      position: absolute; inset: 0;
+      opacity: 0; pointer-events: none;
+      transition: opacity 700ms var(--ease-in-out);
+    }
+    .scene.active { opacity: 1; pointer-events: auto; }
+
+    /* Reveal primitives (driven by .play class) */
+    .rv { opacity: 0; transform: translateY(14px); transition: opacity 1100ms var(--ease-out-expo), transform 1100ms var(--ease-out-expo); }
+    .play .rv { opacity: 1; transform: translateY(0); }
+    .play .rv-d1 { transition-delay: 150ms; }
+    .play .rv-d2 { transition-delay: 350ms; }
+    .play .rv-d3 { transition-delay: 600ms; }
+    .play .rv-d4 { transition-delay: 850ms; }
+    .play .rv-d5 { transition-delay: 1100ms; }
+    .play .rv-d6 { transition-delay: 1350ms; }
+    .play .rv-d7 { transition-delay: 1600ms; }
+    .play .rv-d8 { transition-delay: 1850ms; }
+
+    .rv-soft { opacity: 0; transition: opacity 1300ms var(--ease-out-expo); }
+    .play .rv-soft { opacity: 1; }
+
+    .rv-scale { opacity: 0; transform: scale(.94); transition: opacity 1100ms var(--ease-out-expo), transform 1300ms var(--ease-out-expo); }
+    .play .rv-scale { opacity: 1; transform: scale(1); }
+
+    /* Aurora background */
+    .aurora {
+      position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+    }
+    .aurora::before, .aurora::after {
+      content: ""; position: absolute;
+      width: 80vmax; height: 80vmax; border-radius: 50%;
+      filter: blur(80px); opacity: .5;
+      animation: drift 22s ease-in-out infinite alternate;
+    }
+    .aurora::before {
+      background: radial-gradient(circle, var(--accent-1) 0%, transparent 60%);
+      top: -20vmax; left: -20vmax;
+    }
+    .aurora::after {
+      background: radial-gradient(circle, var(--accent-2) 0%, transparent 60%);
+      bottom: -25vmax; right: -25vmax;
+      animation-delay: -8s;
+    }
+    @keyframes drift {
+      0%   { transform: translate(0, 0) scale(1); }
+      50%  { transform: translate(40px, -30px) scale(1.08); }
+      100% { transform: translate(-30px, 40px) scale(.96); }
+    }
+
+    /* Vignette */
+    .vignette {
+      position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 40%, rgba(2,6,23,.7) 100%);
+    }
+
+    /* Starfield */
+    .stars {
+      position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+    }
+    .stars .star {
+      position: absolute; width: 2px; height: 2px; border-radius: 50%;
+      background: rgba(255,255,255,.85);
+      animation: twinkle 4s ease-in-out infinite;
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: .15; }
+      50% { opacity: .9; }
+    }
+
+    /* Grid background */
+    .gridbg {
+      position: absolute; inset: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(56,189,248,.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56,189,248,.08) 1px, transparent 1px);
+      background-size: 80px 80px;
+      mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+      -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+    }
+
+    /* Animated underline */
+    .draw-line {
+      width: 0;
+      transition: width 1400ms var(--ease-out-expo);
+    }
+    .play .draw-line { width: var(--w, 100%); }
+
+    /* Ring (SVG) */
+    .ring-track { stroke: rgba(255,255,255,.08); }
+    .ring-fill {
+      stroke-dasharray: 251.2;
+      stroke-dashoffset: 251.2;
+      transition: stroke-dashoffset 2200ms var(--ease-out-expo);
+    }
+    .play .ring-fill { stroke-dashoffset: var(--off, 0); }
+
+    /* Hero score giant numeral */
+    .hero-num {
+      font-size: clamp(80px, 11vw, 160px);
+      line-height: 0.85;
+      font-weight: 200;
+      letter-spacing: -0.06em;
+      background: linear-gradient(180deg, #ffffff 0%, var(--accent-1) 70%, var(--accent-2) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 80px rgba(34,211,238,.15);
+    }
+
+    /* Tier card */
+    .tier {
+      transition: all 900ms var(--ease-out-expo);
+      transition-delay: var(--td, 0ms);
+    }
+
+    /* Insight quote */
+    .quote-mark {
+      font-family: "SF Pro Display", Georgia, serif;
+      font-size: 200px;
+      line-height: 0;
+      font-weight: 300;
+      color: var(--accent-1);
+      opacity: .25;
+    }
+
+    /* Bottom chrome */
+    .chrome {
+      position: fixed; left: 0; right: 0; bottom: 0;
+      padding: 24px 40px 28px;
+      display: flex; align-items: center; gap: 20px;
+      z-index: 50;
+      background: linear-gradient(0deg, rgba(2,6,23,.85), transparent);
+      transition: opacity 400ms ease;
+    }
+    .chrome.hidden { opacity: 0; pointer-events: none; }
+
+    /* Scrubber */
+    .scrub {
+      flex: 1;
+      height: 2px; background: rgba(255,255,255,.1); border-radius: 2px;
+      position: relative; cursor: pointer;
+    }
+    .scrub-fill {
+      position: absolute; left: 0; top: 0; bottom: 0;
+      background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
+      border-radius: 2px;
+      transition: width 100ms linear;
+    }
+    .scrub-marker {
+      position: absolute; top: -3px; width: 1px; height: 8px;
+      background: rgba(255,255,255,.25);
+    }
+
+    /* Top chrome */
+    .topbar {
+      position: fixed; top: 0; left: 0; right: 0;
+      padding: 20px 40px;
+      display: flex; align-items: center; justify-content: space-between;
+      z-index: 50; pointer-events: none;
+      transition: opacity 400ms ease;
+    }
+    .topbar.hidden { opacity: 0; }
+    .topbar > * { pointer-events: auto; }
+
+    /* Pill button */
+    .pill {
+      padding: 9px 18px; border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(15,23,42,.5);
+      color: rgba(234,242,255,.92);
+      font-size: 12px; font-weight: 500;
+      cursor: pointer; transition: all .2s var(--ease-out-quart);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      letter-spacing: 0.02em;
+    }
+    .pill:hover { border-color: var(--accent-1); background: rgba(15,23,42,.75); }
+    .pill-primary {
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+      color: #020617; border-color: transparent; font-weight: 600;
+    }
+    .pill-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(34,211,238,.3);
+    }
+
+    /* Pin chip */
+    .pin-chip {
+      position: relative;
+      padding: 18px 22px 18px 46px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.1);
+      background: rgba(15,23,42,.4);
+      backdrop-filter: blur(12px);
+      cursor: pointer;
+      transition: all .3s var(--ease-out-quart);
+      text-align: left;
+    }
+    .pin-chip:hover { border-color: var(--accent-1); background: rgba(15,23,42,.6); }
+    .pin-chip.pinned {
+      border-color: var(--accent-1);
+      background: rgba(34,211,238,.08);
+    }
+    .pin-icon {
+      position: absolute; left: 18px; top: 50%; transform: translateY(-50%);
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,.3);
+      transition: all .25s var(--ease-out-quart);
+      display: grid; place-items: center;
+    }
+    .pin-chip.pinned .pin-icon {
+      background: var(--accent-1);
+      border-color: var(--accent-1);
+    }
+    .pin-chip.pinned .pin-icon::after {
+      content: "✓"; color: #020617; font-size: 11px; font-weight: 800;
+    }
+
+    /* Match row */
+    .match-row, .match-row-grid {
+      display: grid;
+      grid-template-columns: 32px 1fr auto auto;
+      gap: 24px; align-items: center;
+      padding: 18px 0;
+      border-top: 1px solid rgba(255,255,255,.06);
+      opacity: 0; transform: translateY(20px);
+      transition: opacity 800ms var(--ease-out-expo), transform 800ms var(--ease-out-expo);
+      transition-delay: var(--md, 0ms);
+    }
+    .play .match-row, .play .match-row-grid { opacity: 1; transform: translateY(0); }
+
+    /* Bar fill (pillar) */
+    .pillar-bar {
+      height: 3px; background: rgba(255,255,255,.08); border-radius: 3px;
+      overflow: hidden; position: relative;
+    }
+    .pillar-bar > span {
+      position: absolute; inset: 0; transform-origin: left;
+      transform: scaleX(0);
+      background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
+      transition: transform 1800ms var(--ease-out-expo);
+      transition-delay: var(--bd, 0ms);
+    }
+    .play .pillar-bar > span { transform: scaleX(var(--bw, 1)); }
+
+    /* Percentile dot row */
+    .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: rgba(255,255,255,.15);
+      transition: all 900ms var(--ease-out-expo);
+      transition-delay: var(--dd, 0ms);
+    }
+    .dot.you {
+      width: 14px; height: 14px;
+      background: var(--accent-1);
+      box-shadow: 0 0 24px var(--accent-1);
+    }
+    .play .dot.dim { opacity: .4; }
+
+    /* Caret blink */
+    .caret { display: inline-block; width: 2px; height: 1em; background: var(--accent-1); margin-left: 4px; vertical-align: text-bottom; animation: blink 1s steps(2) infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* Lever arrow */
+    .arrow-track {
+      position: relative; height: 1px; background: rgba(255,255,255,.15);
+      overflow: visible;
+    }
+    .arrow-fill {
+      position: absolute; left: 0; top: 0; bottom: 0;
+      background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
+      width: 0;
+      transition: width 1400ms var(--ease-out-expo);
+      transition-delay: 400ms;
+    }
+    .play .arrow-fill { width: 100%; }
+    .arrow-head {
+      position: absolute; right: -1px; top: 50%; transform: translate(0,-50%) scale(0);
+      width: 0; height: 0;
+      border-left: 8px solid var(--accent-2);
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      transition: transform 300ms var(--ease-out-expo);
+      transition-delay: 1700ms;
+    }
+    .play .arrow-head { transform: translate(0,-50%) scale(1); }
+
+    /* Remove tailwind preflight from body color */
+    .accent-text { color: var(--accent-1); }
+    .accent-text-2 { color: var(--accent-2); }
+
+    /* Replay overlay */
+    .end-cta {
+      position: fixed; inset: 0; display: grid; place-items: center;
+      z-index: 60; pointer-events: none;
+    }
+  
+@media print {
+  .chrome, .topbar, .scene:not(.active), [style*="position:fixed"] { display: none !important; }
+  body { background: white !important; }
+  .scene.active { position: relative !important; opacity: 1 !important; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+function useTweaks(defaults) {
+  const [t, setT] = useState(defaults);
+  const setTweak = (k, v) => setT(prev => ({ ...prev, [k]: v }));
+  return [t, setTweak];
+}
+function TweaksPanel({ children }) { return null; }
+function TweakSection() { return null; }
+function TweakRadio() { return null; }
+function TweakSlider() { return null; }
+function TweakText() { return null; }
+function TweakToggle() { return null; }
+function TweakButton() { return null; }
+
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  render() {
+    if(this.state.error) {
+      return (
+        <div style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#020617",color:"white",padding:40,textAlign:"center"}}>
+          <div style={{fontSize:32,marginBottom:16}}>⚠️</div>
+          <div style={{fontSize:20,fontWeight:700,marginBottom:12}}>Something went wrong loading your summary</div>
+          <div style={{fontSize:13,color:"rgba(203,213,245,.6)",maxWidth:480,marginBottom:32}}>{this.state.error.message}</div>
+          <a href="student-workplace.html" style={{padding:"10px 24px",borderRadius:999,background:"rgba(34,211,238,.15)",border:"1px solid rgba(34,211,238,.4)",color:"#22d3ee",textDecoration:"none",fontSize:14}}>← Back to workspace</a>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ── Read real student data from localStorage ──────────────────────
+function loadStudentData() {
+  const SAVED_KEY   = "lp_saved_items_v1";
+  const PROFILE_KEY = "lp_profile_v1";
+
+  let saved = [];
+  let prof  = {};
+  try { saved = JSON.parse(localStorage.getItem(SAVED_KEY)  || "[]"); } catch(e){}
+  try { prof  = JSON.parse(localStorage.getItem(PROFILE_KEY)|| "null") || {}; } catch(e){}
+
+  const colleges = saved.filter(x => x.type === "college");
+  const essays   = saved.filter(x => x.type === "essay");
+
+  // Thresholds
+  const MIN_COLLEGES = 3, MIN_ESSAYS = 1;
+  const hasProfile   = !!(prof.gpa || prof.sat);
+  const unlocked     = colleges.length >= MIN_COLLEGES && essays.length >= MIN_ESSAYS && hasProfile;
+
+  // GPA / SAT
+  const gpa = parseFloat(prof.gpa) || null;
+  const sat = parseInt(prof.sat, 10) || null;
+
+  // Overall fit score — weighted formula from real inputs
+  // Academic: 50% weight (GPA + SAT), Progress: 30% (colleges+essays), Profile: 20%
+  let academicScore = 70; // default mid
+  if(gpa && sat){
+    const gpaScore = Math.min(100, Math.round(((gpa - 2.0) / 2.0) * 100));
+    const satScore = Math.min(100, Math.round(((sat - 800) / 800) * 100));
+    academicScore  = Math.round(gpaScore * 0.55 + satScore * 0.45);
+  } else if(gpa){
+    academicScore = Math.min(100, Math.round(((gpa - 2.0) / 2.0) * 100));
+  } else if(sat){
+    academicScore = Math.min(100, Math.round(((sat - 800) / 800) * 100));
+  }
+
+  const collegeScore  = Math.min(100, Math.round((Math.min(colleges.length, 15) / 15) * 100));
+  const essayScore    = Math.min(100, Math.round((Math.min(essays.length, 5) / 5) * 100));
+  const progressScore = Math.round(collegeScore * 0.6 + essayScore * 0.4);
+  const profileScore  = hasProfile ? 85 : 50;
+
+  const overallScore = Math.max(40, Math.min(99,
+    Math.round(academicScore * 0.50 + progressScore * 0.30 + profileScore * 0.20)
+  ));
+
+  // Pillar scores
+  const pillarAcademic  = academicScore;
+  const pillarBrand     = Math.max(45, Math.min(99, Math.round(essayScore * 0.7 + 30)));
+  const pillarFinancial = Math.max(50, Math.min(95, Math.round(progressScore * 0.5 + 45)));
+
+  // Build MATCHES from saved colleges — tier → estimated fit/admit
+  const tierFit   = { Safety:{ lo:85, hi:93 }, Target:{ lo:70, hi:84 }, Reach:{ lo:52, hi:69 } };
+  const tierAdmit = { Safety:"85–95%", Target:"55–75%", Reach:"15–35%" };
+  const tierRoi   = { Safety:"$95–115K", Target:"$110–140K", Reach:"$130–185K" };
+
+  const matches = colleges.slice(0, 6).map((c, i) => {
+    const tier = c.fit || "Target";
+    const range = tierFit[tier] || tierFit.Target;
+    const fit   = range.lo + Math.round(Math.random() * (range.hi - range.lo));
+    return { name: c.name, fit, admit: tierAdmit[tier] || "55–70%", roi: tierRoi[tier] || "$110K", tag: tier };
+  }).sort((a,b) => b.fit - a.fit);
+
+  // Counts for progress bars
+  const safeties  = colleges.filter(c => (c.fit||"").toLowerCase() === "safety").length;
+  const targets   = colleges.filter(c => (c.fit||"").toLowerCase() === "target").length;
+  const reaches   = colleges.filter(c => (c.fit||"").toLowerCase() === "reach").length;
+
+  const listBalance = safeties > 0 && targets > 0 && reaches > 0 ? "Balanced"
+    : (reaches > targets && reaches > safeties) ? "Reach-heavy"
+    : (targets > reaches && targets > safeties) ? "Target-heavy"
+    : (safeties > targets && safeties > reaches) ? "Safety-heavy"
+    : "Building";
+
+  // What-if — personalized based on actual gaps
+  const whatifs = [];
+  if(sat && sat < 1400) whatifs.push({ icon:"📈", action:`Raise SAT by +${Math.round((1400-sat)/50)*50} pts`, delta:"+5–8% admit chance", sub:"Shifts borderline targets to likely" });
+  if(essays.length < 3) whatifs.push({ icon:"✍️", action:"Complete 2 more supplemental essays", delta:"Boosts reach school chances", sub:"Specificity is the differentiator" });
+  if(gpa && gpa < 3.7)  whatifs.push({ icon:"📚", action:"Raise GPA by +0.2 this semester", delta:"+3–5% admit chance", sub:"Upward trend matters to admissions" });
+  if(reaches < 2)       whatifs.push({ icon:"🎯", action:"Add 1–2 reach schools to your list", delta:"Expand your ceiling", sub:"You may be underselling yourself" });
+  if(safeties < 2)      whatifs.push({ icon:"🛡️", action:"Add 1–2 safety schools", delta:"Guarantees a great option", sub:"Every strong list needs a floor" });
+  // Always have at least 3 what-ifs
+  if(whatifs.length < 3) whatifs.push({ icon:"🔍", action:"Research financial aid at each school", delta:"Could reduce net cost 15–30%", sub:"Aid often exceeds published sticker price" });
+  if(whatifs.length < 3) whatifs.push({ icon:"📬", action:"Request 2 recommendation letters now", delta:"Gives writers enough lead time", sub:"Strong recs add real weight at selective schools" });
+
+  // Next steps — gaps drive the list
+  const nextSteps = [];
+  if(essays.length < 2) nextSteps.push({ i:"✍️", t:"Write your personal statement draft", s:"Open Essay Studio, paste your draft, and run Smart Review to see where it stands." });
+  if(safeties < 2)      nextSteps.push({ i:"🛡️", t:"Add safety schools to your list", s:"A balanced list needs at least 2 schools where you're well above the admit band." });
+  if(sat && sat < 1350) nextSteps.push({ i:"📈", t:"Register for the next SAT", s:"A score boost is the highest-return move you can make before applications open." });
+  nextSteps.push({ i:"💰", t:"Run the ROI Calculator", s:"Compare net costs and 5-year earnings between your top 2 schools before you commit." });
+
+  // Insight paragraph — templated from real data
+  const name = prof.name || "Student";
+  const gpaStr = gpa ? gpa.toFixed(2) : "your GPA";
+  const satStr = sat ? sat.toString() : "your SAT";
+  const topSchool = matches.length > 0 ? matches[0].name : "your top school";
+  const essayGap  = Math.max(0, 3 - essays.length);
+  const collegeGap = Math.max(0, 3 - colleges.length);
+
+  let insight = `${name}, `;
+  if(overallScore >= 80) insight += `you're in a genuinely strong position. `;
+  else if(overallScore >= 65) insight += `you've made solid progress — there's still time to push higher. `;
+  else insight += `you're building something real. Every step forward compounds. `;
+
+  if(gpa && sat) insight += `Your ${gpaStr} GPA and ${satStr} SAT place you ${sat >= 1350 ? "comfortably" : "competitively"} in range for most of your target schools. `;
+
+  if(sat && sat < 1400) insight += `Your highest-return move right now is your SAT — a +${Math.round((1400-sat)/50)*50} point lift would materially shift your reach school outcomes. `;
+  else if(essays.length < 2) insight += `Your next priority is essays — specificity and authentic voice are what separate similar applicants at selective schools. `;
+
+  if(essayGap > 0) insight += `Complete ${essayGap} more essay${essayGap > 1 ? "s" : ""} to stay on pace. `;
+  if(matches.length > 0) insight += `Schools like ${topSchool} are realistic targets given your profile. `;
+  insight += `Stay consistent and execute one step at a time.`;
+
+  // Progress bars (real data)
+  const progress = [
+    { label:"Colleges on List",     cur:colleges.length, total:15, pct:Math.round((colleges.length/15)*100),   tone:"cyan"   },
+    { label:"Essays Drafted",       cur:essays.length,   total:5,  pct:Math.round((essays.length/5)*100),      tone:"violet" },
+    { label:"List Balance",         cur:safeties+targets+reaches, total:3, pct:listBalance==="Balanced"?100:Math.round(((safeties>0?1:0)+(targets>0?1:0)+(reaches>0?1:0))/3*100), tone:"amber" },
+  ];
+
+  // SAT lever numbers for scene 09
+  const satLeverFrom  = sat || 1200;
+  const satLift       = sat && sat < 1450 ? Math.round((1450 - sat) / 50) * 50 : 50;
+  const satLeverTo    = satLeverFrom + satLift;
+  const reachesAffected = Math.min(reaches, 3);
+
+  return {
+    unlocked, prof, gpa, sat, gpaStr, satStr,
+    overallScore, pillarAcademic, pillarBrand, pillarFinancial,
+    matches, progress, whatifs, nextSteps, insight,
+    colleges, essays, safeties, targets, reaches, listBalance,
+    satLeverFrom, satLift, satLeverTo, reachesAffected,
+    collegeCount: colleges.length, essayCount: essays.length,
+    generatedDate: new Date().toLocaleDateString("en-US", {month:"long", day:"numeric", year:"numeric"}),
+    name: prof.name || "Student",
+  };
+}
+
+const SD = loadStudentData(); // loaded once at module level, consistent across all scenes
+
+const TWEAK_DEFAULTS = {
+  "variant":     "aurora",
+  "score":       SD.overallScore,
+  "studentName": SD.name,
+  "autoPlay":    true,
+  "speed":       1,
+  "accent":      "cyan"
+};
+
+const ACCENTS = {
+  cyan:   { a1: "#22d3ee", a2: "#3b82f6" },
+  violet: { a1: "#a78bfa", a2: "#6366f1" },
+  amber:  { a1: "#fbbf24", a2: "#f97316" },
+};
+
+// All data sourced from SD (real localStorage data)
+const PILLARS = [
+  { name: "Academic Profile",   sub: "GPA · SAT · Rigor",      val: SD.pillarAcademic  },
+  { name: "Brand Identity",     sub: "Essays · Story · Voice", val: SD.pillarBrand     },
+  { name: "Financial Strategy", sub: "ROI · Aid · Net Cost",   val: SD.pillarFinancial },
+];
+
+const MATCHES  = SD.matches;
+const PROGRESS = SD.progress;
+const WHATIFS  = SD.whatifs;
+
+// Scene durations — pacing tuned for ~60s total
+const buildScenes = () => [
+  { id: "preflight",  dur: 5000,   label: "01" },
+  { id: "hero",       dur: 9000,   label: "02" },
+  { id: "tier",       dur: 10000,  label: "03" },
+  { id: "legend",     dur: 13000,  label: "04" },
+  { id: "pillars",    dur: 8500,   label: "05" },
+  { id: "percentile", dur: 10000,  label: "06" },
+  { id: "matches",    dur: 10000,  label: "07" },
+  { id: "progress",   dur: 8500,   label: "08" },
+  { id: "whatif",     dur: 9500,   label: "09" },
+  { id: "lever",      dur: 9500,   label: "10" },
+  { id: "insight",    dur: 16000,  label: "11" },
+  { id: "exec",       dur: 999999, label: "12" },
+];
+
+const getTier = (score) => {
+  if (score >= 90) return { name: "Platinum", idx: 3 };
+  if (score >= 75) return { name: "Gold", idx: 2 };
+  if (score >= 60) return { name: "Silver", idx: 1 };
+  return { name: "Bronze", idx: 0 };
+};
+
+const TIERS = [
+  { name: "Bronze",   range: "0–59",   tone: "#a07a4a" },
+  { name: "Silver",   range: "60–74",  tone: "#9ca3af" },
+  { name: "Gold",     range: "75–89",  tone: "#fbbf24" },
+  { name: "Platinum", range: "90–100", tone: "#e0e7ff" },
+];
+
+const TAG_COLORS = {
+  Reach:  { bg: "rgba(248,113,113,.1)",  bd: "rgba(248,113,113,.4)", fg: "#fca5a5" },
+  Target: { bg: "rgba(251,191,36,.1)",   bd: "rgba(251,191,36,.4)",  fg: "#fde68a" },
+  Safety: { bg: "rgba(52,211,153,.1)",   bd: "rgba(52,211,153,.4)",  fg: "#6ee7b7" },
+};
+
+const PROGRESS_TONE = {
+  cyan:   "linear-gradient(90deg, #22d3ee, #3b82f6)",
+  amber:  "linear-gradient(90deg, #fbbf24, #f59e0b)",
+  violet: "linear-gradient(90deg, #a78bfa, #8b5cf6)",
+};
+
+// ── Hooks ────────────────────────────────────────────────────────
+function useCounter(target, active, duration = 2200) {
+  const [value, setValue] = useState(0);
+  const startRef = useRef(0); const rafRef = useRef(0);
+  useEffect(() => {
+    if (!active) { setValue(0); return; }
+    startRef.current = 0;
+    const step = (t) => {
+      if (!startRef.current) startRef.current = t;
+      const p = Math.min(1, (t - startRef.current) / duration);
+      const eased = p === 1 ? 1 : 1 - Math.pow(2, -10 * p);
+      setValue(Math.round(target * eased));
+      if (p < 1) rafRef.current = requestAnimationFrame(step);
+    };
+    rafRef.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [target, active, duration]);
+  return value;
+}
+
+function useTypeOn(text, active, speed = 22, startDelay = 0) {
+  const [out, setOut] = useState("");
+  useEffect(() => {
+    if (!active) { setOut(""); return; }
+    let i = 0; let t1, t2;
+    t1 = setTimeout(() => {
+      t2 = setInterval(() => {
+        i++; setOut(text.slice(0, i));
+        if (i >= text.length) clearInterval(t2);
+      }, speed);
+    }, startDelay);
+    return () => { clearTimeout(t1); clearInterval(t2); };
+  }, [text, active, speed, startDelay]);
+  return out;
+}
+
+// ── Backgrounds ──────────────────────────────────────────────────
+function Aurora() { return (<><div className="aurora" /><div className="vignette" /></>); }
+function Starfield() {
+  const stars = useMemo(() => Array.from({ length: 110 }, () => ({
+    x: Math.random() * 100, y: Math.random() * 100,
+    d: Math.random() * 4, s: 0.5 + Math.random() * 1.8,
+  })), []);
+  return (<>
+    <div className="stars">{stars.map((s,i) => (
+      <span key={i} className="star" style={{ left:`${s.x}%`, top:`${s.y}%`, transform:`scale(${s.s})`, animationDelay:`${s.d}s` }} />
+    ))}</div>
+    <div className="vignette" />
+  </>);
+}
+function GridBg() { return (<><div className="gridbg" /><div className="vignette" /></>); }
+function Background({ variant }) {
+  if (variant === "starfield") return <Starfield />;
+  if (variant === "grid") return <GridBg />;
+  return <Aurora />;
+}
+
+function BrandMark({ size = 28 }) {
+  return (<div style={{
+    width: size, height: size, borderRadius: "50%",
+    background: "radial-gradient(circle at 30% 0, var(--accent-1) 0, var(--accent-2) 40%, #111827 95%)",
+    boxShadow: "0 0 0 1.5px rgba(56,189,248,.5), 0 8px 20px rgba(15,23,42,.9)",
+    flexShrink: 0,
+  }} />);
+}
+
+// ── Scene 01 — Preflight ─────────────────────────────────────────
+function ScenePreflight({ active }) {
+  return (
+    <div className={`scene ${active ? "active play" : ""}`}>
+      <div className="absolute inset-0 grid place-items-center">
+        <div className="text-center" style={{ maxWidth: 600 }}>
+          <div className="rv rv-d1 mb-8 flex items-center justify-center gap-3">
+            <BrandMark size={20} />
+            <span style={{ fontSize:"16px", color:"#ffffff", fontWeight:700, letterSpacing:".08em", textTransform:"uppercase" }}>LaunchPath AI Executive Summary</span>
+          </div>
+          <div className="rv rv-d2 display" style={{ fontSize: "clamp(40px, 5vw, 72px)", lineHeight: 1.05 }}>
+            Generating your<br/>
+            <span className="display-bold" style={{
+              background: "linear-gradient(135deg, var(--accent-1), var(--accent-2))",
+              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+            }}>Admissions Alpha.</span>
+          </div>
+          <div className="rv rv-d3 mt-12 mx-auto" style={{ width: 280 }}>
+            <div className="h-px relative" style={{ background: "rgba(255,255,255,.1)" }}>
+              <div className="absolute inset-y-0 left-0 draw-line" style={{
+                "--w": "100%", transitionDuration: "2200ms", transitionDelay: "600ms",
+                background: "linear-gradient(90deg, var(--accent-1), var(--accent-2))",
+              }} />
+            </div>
+            <div className="micro mt-3 flex justify-between" style={{ color: "rgba(203,213,245,.5)" }}>
+              <span>Synthesizing 6 modules</span><span>60s</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Scene 02 — Hero ──────────────────────────────────────────────
+function SceneHero({ active, score, studentName }) {
+  const v = useCounter(score, active, 3600);
+  return (
+    <div className={`scene ${active ? "active play" : ""}`}>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <div className="rv rv-d1 micro" style={{ color: "rgba(203,213,245,.6)" }}>
+          <span style={{fontSize:"18px",color:"#ffffff",letterSpacing:".14em",fontWeight:600}}>{studentName} · Class of 2027 · Overall Fit Score</span>
+        </div>
+        <div className="rv-soft mt-4">
+          <div className="hero-num display tabular-nums">{v}</div>
+        </div>
+        <div className="rv rv-d4 mt-8 flex items-center gap-3">
+          <span className="micro" style={{ color: "rgba(203,213,245,.5)" }}>out of 100</span>
+          <span style={{ width: 1, height: 12, background: "rgba(255,255,255,.15)" }} />
+          <span className="micro accent-text">Gold Tier</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Scene 03 — Tier ──────────────────────────────────────────────
+function SceneTier({ active, score }) {
+  const tier = getTier(score);
+  return (
+    <div className={`scene ${active ? "active play" : ""}`}>
+      <div className="absolute inset-0 flex flex-col items-center justify-center px-12">
+        <div className="rv rv-d1 mb-8" style={{ color: "#ffffff", fontSize:"16px", letterSpacing:".22em", textTransform:"uppercase", fontWeight:600 }}>You've reached</div>
+        <div className="rv rv-d2 display display-bold mb-2" style={{ fontSize: "clamp(80px, 11vw, 160px)" }}>
+          <span style={{
+            background: `linear-gradient(135deg, ${TIERS[tier.idx].tone}, var(--accent-1))`,
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+          }}>{tier.name}</span>
+        </div>
+        <div className="rv rv-d3 mb-16" style={{ color: "#ffffff", fontSize:"15px", letterSpacing:".12em", textTransform:"uppercase", fontWeight:500 }}>
+          Tier {tier.idx + 1} of 4 · Highly competitive for your target list
+        </div>
+        <div className="rv rv-d4 grid grid-cols-4 gap-4" style={{ width: "min(720px, 90vw)" }}>
+          {TIERS.map((t, i) => {
+            const isCurrent = i === tier.idx;
+            return (
+              <div key={t.name} className="tier text-center" style={{
+                "--td": `${i * 120}ms`, padding: "18px 12px", borderRadius: 12,
+                border: `1px solid ${isCurrent ? "var(--accent-1)" : "rgba(255,255,255,.08)"}`,
+                background: isCurrent ? "rgba(34,211,238,.08)" : "rgba(15,23,42,.4)",
+                opacity: isCurrent ? 1 : 0.45,
+                transform: isCurrent ? "translateY(-6px)" : "translateY(0)",
+              }}>
+                <div className="mb-1" style={{ color: "#ffffff", fontSize:"13px", letterSpacing:".12em", textTransform:"uppercase", fontWeight:700 }}>{t.name}</div>
+                <div className="tabular-nums" style={{ color: "rgba(203,213,245,.7)", fontSize:"13px" }}>{t.range}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Scene 04 — Legend: How Your Score Works ──────────────────────
+function SceneLegend({ active }) {
+  const metrics = [
+    {
+      label: "Overall Fit Score",
+      what: "Your single readiness number — combines academic strength, essay progress, and profile completeness.",
+      range: "0 – 100",
+      icon: "⚡",
+      color: "#22d3ee",
+    },
+    {
+      label: "Academic Profile",
+      what: "Derived from your GPA and SAT score. The most objective input — reflects raw academic competitiveness.",
+      range: "0 – 100",
+      icon: "📚",
+      color: "#a78bfa",
+    },
+    {
+      label: "Brand Identity",
+      what: "Driven by your essay count and narrative depth. Low until essays are drafted — this is your biggest lever.",
+      range: "0 – 100",
+      icon: "✍️",
+      color: "#34d399",
+    },
+    {
+      label: "Financial Strategy",
+      what: "Reflects college list progress and ROI research. Improves as you save schools and run comparisons.",
+      range: "0 – 100",
+      icon: "💰",
+      color: "#fbbf24",
+    },
+  ];
+
+  const tiers = [
+    { name: "Bronze",   range: "0 – 59",   tone: "#c97c3a", desc: "Building foundations" },
+    { name: "Silver",   range: "60 – 74",  tone: "#9ca3af", desc: "Competitive baseline"  },
+    { name: "Gold",     range: "75 – 89",  tone: "#fbbf24", desc: "Highly competitive"    },
+    { name: "Platinum", range: "90 – 100", tone: "#c7d2fe", desc: "Elite readiness"       },
+  ];
+
+  const studentTier = getTier(SD.overallScore);
+
+  return (
+    <div className={`scene ${active ? "active play" : ""}`}>
+      <div className="absolute inset-0 flex flex-col justify-center px-12 lg:px-24" style={{ gap: 0 }}>
+
+        {/* Header */}
+        <div className="rv rv-d1 label-tiny mb-4" style={{ color: "rgba(203,213,245,.55)" }}>
+          Understanding your results
+        </div>
+        <div className="rv rv-d2 display mb-10" style={{ fontSize: "clamp(28px,3.4vw,52px)", lineHeight: 1.1, maxWidth: 800 }}>
+          Here's exactly what<br /><span className="display-bold">every number means.</span>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 32px", maxWidth: 1100 }}>
+
+          {/* Left — Metric definitions */}
+          <div className="rv rv-d3" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {metrics.map((m, i) => (
+              <div key={m.label} className="rv" style={{
+                transitionDelay: `${400 + i * 120}ms`,
+                display: "flex", alignItems: "flex-start", gap: 12,
+                padding: "12px 14px", borderRadius: 12,
+                background: "rgba(15,23,42,.55)",
+                border: "1px solid rgba(255,255,255,.07)",
+              }}>
+                <div style={{
+                  width: 34, height: 34, borderRadius: 9, flexShrink: 0,
+                  background: `${m.color}18`,
+                  border: `1px solid ${m.color}40`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 16,
+                }}>{m.icon}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#f3f4f6" }}>{m.label}</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: m.color, letterSpacing: ".05em", flexShrink: 0, marginLeft: 8 }}>{m.range}</div>
+                  </div>
+                  <div style={{ fontSize: 12, color: "rgba(203,213,245,.6)", lineHeight: 1.5 }}>{m.what}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Right — Tier legend */}
+          <div className="rv rv-d4" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "rgba(203,213,245,.45)", marginBottom: 4 }}>
+              Readiness Tiers
+            </div>
+            {tiers.map((tier, i) => {
+              const isYours = tier.name === studentTier.name;
+              return (
+                <div key={tier.name} className="rv" style={{
+                  transitionDelay: `${500 + i * 110}ms`,
+                  display: "flex", alignItems: "center", gap: 14,
+                  padding: "13px 16px", borderRadius: 12,
+                  background: isYours ? `${tier.tone}14` : "rgba(15,23,42,.45)",
+                  border: `1px solid ${isYours ? tier.tone + "55" : "rgba(255,255,255,.07)"}`,
+                  transition: "all .3s ease",
+                }}>
+                  <div style={{
+                    width: 10, height: 10, borderRadius: "50%", flexShrink: 0,
+                    background: tier.tone,
+                    boxShadow: isYours ? `0 0 10px ${tier.tone}88` : "none",
+                  }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 14, fontWeight: isYours ? 700 : 500, color: isYours ? tier.tone : "rgba(203,213,245,.8)" }}>
+                        {tier.name}
+                      </span>
+                      {isYours && (
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: `${tier.tone}22`, border: `1px solid ${tier.tone}55`, color: tier.tone, letterSpacing: ".06em" }}>
+                          YOU
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 11, color: "rgba(203,213,245,.5)", marginTop: 1 }}>{tier.desc}</div>
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: isYours ? tier.tone : "rgba(203,213,245,.35)", letterSpacing: ".04em" }}>
+                    {tier.range}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Motivational line */}
+            <div className="rv rv-d5" style={{
+              transitionDelay: "960ms",
+              marginTop: 8, padding: "12px 16px", borderRadius: 12,
+              background: "linear-gradient(135deg, rgba(34,211,238,.07), rgba(59,130,246,.05))",
+              border: "1px solid rgba(34,211,238,.18)",
+            }}>
+              <div style={{ fontSize: 12, color: "rgba(203,213,245,.75)", lineHeight: 1.6 }}>
+                <span style={{ color: "#22d3ee", fontWeight: 700 }}>✦ Your score updates in real time.</span>{" "}
+                Save more colleges, draft more essays, and set your GPA and SAT to watch every metric climb.
+                {SD.overallScore < 90 && (
+                  <span style={{ display: "block", marginTop: 6, color: "rgba(203,213,245,.55)" }}>
+                    You need <span style={{ color: "#fbbf24", fontWeight: 600 }}>{90 - SD.overallScore} more points</span> to reach Platinum.
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Scene 05 — Pillars ───────────────────────────────────────────
+function PillarItem({ p, i, active }) {
+  const cnt = useCounter(p.val, active, 2400);
+  return (
+    <div key={p.name} className="rv" style={{ transitionDelay: `${600 + i * 280}ms` }}>
+      <div className="micro mb-3" style={{ color: "rgba(203,213,245,.55)" }}>0{i+1}</div>
+      <div className="display tabular-nums mb-1" style={{ fontSize: 64, lineHeight: 1 }}>
+        {cnt}<span className="text-2xl" style={{ color: "rgba(203,213,245,.4)" }}>/100</span>
+      </div>
+      <div className="text-base font-medium mt-3" style={{ color: "#f3f4f6" }}>{p.name}</div>
+      <div className="text-xs mt-1 mb-4" style={{ color: "rgba(203,213,245,.55)" }}>{p.sub}</div>
+      <div className="pillar-bar" style={{ "--bw": p.val / 100, "--bd": `${800 + i * 280}ms` }}><span /></div>
+    </div>
+  );
+}
+
+function ScenePillars({ active }) {
+  return (
+    <div className={`scene ${active ? "active play" : ""}`}>
+      <div className="absolute inset-0 flex flex-col justify-center px-12 lg:px-24">
+        <div className="rv rv-d1 label-tiny mb-3" style={{ color: "rgba(203,213,245,.6)" }}>What's behind your score</div>
+        <div className="rv rv-d2 display mb-16" style={{ fontSize: "clamp(36px, 4.4vw, 64px)", lineHeight: 1.1, maxWidth: 900 }}>
+          Three pillars compose your<br/><span className="display-bold">Admissions Alpha.</span>
+        </div>
+        <div className="grid grid-cols-3 gap-12" style={{ maxWidth: 1100 }}>
+          {PILLARS.map((p, i) => <PillarItem key={p.name} p={p} i={i} active={active} />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Scene 05 — List Composition (replaces percentile — no fake cohort data) ──
+function ScenePercentile({ active, studentName }) {
+  const safeties = SD.safeties, targets = SD.targets, reaches = SD.reaches;
+  const total    = safeties + targets + reaches || 1;
+  return (
+    <div className={`scene ${active ? "active play" : ""}`}>
+      <div className="absolute inset-0 flex flex-col items-center justify-center px-12">
+        <div className="rv rv-d1 label-tiny mb-6" style={{ color: "rgba(203,213,245,.6)" }}>Your college list breakdown</div>
+        <div className="rv rv-d2 display display-bold mb-2" style={{ fontSize: "clamp(60px, 8vw, 110px)", lineHeight: 1.1 }}>
+          <span style={{
+            background: "linear-gradient(135deg, var(--accent-1), var(--accent-2))",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+          }}>{SD.listBalance}</span>
+        </div>
+        <div className="rv rv-d3 text-base mb-12" style={{ color: "rgba(203,213,245,.7)", maxWidth: 500, textAlign: "center" }}>
+          {safeties} Safety · {targets} Target · {reaches} Reach — {total} schools total
+        </div>
+        <div className="rv rv-d4 flex items-end gap-8" style={{ height: 120 }}>
+          {[
+            { label:"Safety", count:safeties, color:"#6ee7b7", pct:safeties/total },
+            { label:"Target", count:targets,  color:"#fde68a", pct:targets/total  },
+            { label:"Reach",  count:reaches,  color:"#fca5a5", pct:reaches/total  },
+          ].map(b => (
+            <div key={b.label} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
+              <div style={{ fontSize:24, fontWeight:700, color:b.color }}>{b.count}</div>
+              <div style={{ width:60, height:Math.max(8, Math.round(b.pct*100)), background:b.color, borderRadius:"6px 6px 0 0", minHeight:8 }} />
+              <div style={{ fontSize:11, letterSpacing:".12em", textTransform:"uppercase", color:"rgba(203,213,245,.6)" }}>{b.label}</div>
+            </div>
+          ))}
+        </div>
+        <div className="rv rv-d5 mt-10 micro" style={{ color: "rgba(203,213,245,.5)" }}>
+          {SD.listBalance === "Balanced" ? "✓ A balanced list gives you the best range of options on decision day." : "Tip: aim for at least 1 Safety, 2 Targets, and 1 Reach for a well-rounded list."}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Scene 06 — Top matches table (full from exec-summary) ────────
+function SceneMatches({ active }) {
+  return (
+    <div className={`scene ${active ? "active play" : ""}`}>
+      <div className="absolute inset-0 flex flex-col justify-center px-12 lg:px-24">
+        <div className="rv rv-d1 label-tiny mb-3" style={{ color: "rgba(203,213,245,.6)" }}>Your top college matches</div>
+        <div className="rv rv-d2 display mb-10" style={{ fontSize: "clamp(34px, 4vw, 56px)", lineHeight: 1.1 }}>
+          Schools where your <span className="display-bold">Alpha plays best.</span>
+        </div>
+        <div style={{ maxWidth: 1200 }}>
+          <div className="rv rv-d3 grid items-center gap-6" style={{
+            gridTemplateColumns: "32px 1fr 90px 110px 130px 110px",
+            padding: "0 0 12px 0",
+            borderBottom: "1px solid rgba(255,255,255,.08)",
+            color: "rgba(203,213,245,.5)",
+          }}>
+            <span className="micro">#</span>
+            <span className="micro">College</span>
+            <span className="micro text-right">Fit</span>
+            <span className="micro text-right">Admit %</span>
+            <span className="micro text-right">5yr ROI</span>
+            <span className="micro">Type</span>
+          </div>
+          {MATCHES.map((m, i) => {
+            const tag = TAG_COLORS[m.tag];
+            return (
+              <div key={m.name} className="match-row-grid" style={{
+                "--md": `${500 + i * 220}ms`,
+                gridTemplateColumns: "32px 1fr 90px 110px 130px 110px",
+              }}>
+                <span className="micro tabular-nums" style={{ color: "rgba(203,213,245,.5)" }}>0{i+1}</span>
+                <span className="text-xl font-medium" style={{ letterSpacing: "-0.01em" }}>{m.name}</span>
+                <span className="display tabular-nums text-right" style={{ fontSize: 28, lineHeight: 1, color: "var(--accent-1)" }}>{m.fit}</span>
+                <span className="tabular-nums text-right text-base" style={{ color: "rgba(243,244,246,.85)" }}>{m.admit}</span>
+                <span className="tabular-nums text-right text-base" style={{ color: "#6ee7b7", fontWeight: 500 }}>{m.roi}</span>
+                <span>
+                  <span style={{
+                    display: "inline-block", padding: "4px 12px", borderRadius: 999,
+                    fontSize: 11, fontWeight: 700, letterSpacing: ".05em",
+                    background: tag.bg, border: `1px solid ${tag.bd}`, color: tag.fg,
+                  }}>{m.tag}</span>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Scene 07 — Application Progress ──────────────────────────────
+function SceneProgress({ active }) {
+  return (
+    <div className={`scene ${active ? "active play" : ""}`}>
+      <div className="absolute inset-0 flex flex-col justify-center px-12 lg:px-24">
+        <div className="rv rv-d1 label-tiny mb-3" style={{ color: "rgba(203,213,245,.6)" }}>Application progress</div>
+        <div className="rv rv-d2 display mb-12" style={{ fontSize: "clamp(34px, 4vw, 56px)", lineHeight: 1.1 }}>
+          You're <span className="display-bold">{SD.progress[0].pct}%</span> through building your college list.
+        </div>
+        <div style={{ maxWidth: 1100 }}>
+          {PROGRESS.map((p, i) => (
+            <div key={p.label} className="rv" style={{ transitionDelay: `${500 + i * 200}ms`, padding: "18px 0", borderTop: "1px solid rgba(255,255,255,.06)" }}>
+              <div className="grid items-center gap-6" style={{ gridTemplateColumns: "260px 1fr 120px" }}>
+                <div className="text-base" style={{ color: "rgba(243,244,246,.92)" }}>{p.label}</div>
+                <div className="pillar-bar" style={{ height: 4, "--bw": p.pct / 100, "--bd": `${700 + i * 200}ms` }}>
+                  <span style={{ background: PROGRESS_TONE[p.tone] }} />
+                </div>
+                <div className="display tabular-nums text-right" style={{ fontSize: 28, lineHeight: 1 }}>
+                  {p.cur}<span className="text-base" style={{ color: "rgba(203,213,245,.5)" }}>/{p.total}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+          <div className="rv rv-d8 mt-8" style={{
+            padding: "14px 18px", background: "rgba(52,211,153,.08)",
+            border: "1px solid rgba(52,211,153,.2)", borderRadius: 12,
+            fontSize: 14, color: "#6ee7b7",
+          }}>
+            ✓ On track for your target deadlines. Focus on essays and apps to close the gap.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Scene 08 — What-If Impact ────────────────────────────────────
+function SceneWhatIf({ active }) {
+  return (
+    <div className={`scene ${active ? "active play" : ""}`}>
+      <div className="absolute inset-0 flex flex-col justify-center px-12 lg:px-24">
+        <div className="rv rv-d1 label-tiny mb-3" style={{ color: "rgba(203,213,245,.6)" }}>What-If impact</div>
+        <div className="rv rv-d2 display mb-12" style={{ fontSize: "clamp(34px, 4vw, 56px)", lineHeight: 1.1 }}>
+          Levers that could <span className="display-bold">shift your outcomes.</span>
+        </div>
+        <div className="grid grid-cols-2 gap-5" style={{ maxWidth: 1100 }}>
+          {WHATIFS.map((w, i) => (
+            <div key={w.action} className="rv" style={{
+              transitionDelay: `${500 + i * 220}ms`,
+              padding: "22px 24px", borderRadius: 14,
+              border: "1px solid rgba(255,255,255,.08)", background: "rgba(15,23,42,.5)",
+              backdropFilter: "blur(8px)",
+            }}>
+              <div className="flex items-start gap-4">
+                <div style={{ fontSize: 28, lineHeight: 1 }}>{w.icon}</div>
+                <div className="flex-1">
+                  <div className="text-base font-medium mb-2" style={{ color: "#f3f4f6" }}>{w.action}</div>
+                  <div className="text-sm accent-text font-medium">{w.delta}</div>
+                  <div className="text-xs mt-1" style={{ color: "rgba(203,213,245,.6)" }}>{w.sub}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Scene 09 — Lever (focused) ───────────────────────────────────
+function SceneLever({ active }) {
+  return (
+    <div className={`scene ${active ? "active play" : ""}`}>
+      <div className="absolute inset-0 flex flex-col items-center justify-center px-12">
+        <div className="rv rv-d1 label-tiny mb-6" style={{ color: "rgba(203,213,245,.6)" }}>Your highest-return move</div>
+        <div style={{ maxWidth: 1000, width: "100%" }}>
+          <div className="grid items-center gap-6" style={{ gridTemplateColumns: "1fr auto 1fr" }}>
+            <div className="rv rv-d2 text-right">
+              <div className="micro mb-2" style={{ color: "rgba(203,213,245,.5)" }}>Today</div>
+              <div className="display tabular-nums" style={{ fontSize: "clamp(48px, 7vw, 96px)", lineHeight: 1 }}>{SD.satLeverFrom}</div>
+              <div className="text-sm mt-2" style={{ color: "rgba(203,213,245,.6)" }}>SAT</div>
+            </div>
+            <div className="relative" style={{ width: 200 }}>
+              <div className="arrow-track"><div className="arrow-fill" /><div className="arrow-head" /></div>
+              <div className="absolute -top-8 left-1/2 -translate-x-1/2 micro accent-text whitespace-nowrap rv rv-d4">+ {SD.satLift} pts</div>
+            </div>
+            <div className="rv rv-d3 text-left">
+              <div className="micro mb-2 accent-text">After 6–8 wks prep</div>
+              <div className="display tabular-nums display-bold" style={{
+                fontSize: "clamp(48px, 7vw, 96px)", lineHeight: 1,
+                background: "linear-gradient(135deg, var(--accent-1), var(--accent-2))",
+                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+              }}>{SD.satLeverTo}</div>
+              <div className="text-sm mt-2" style={{ color: "rgba(203,213,245,.6)" }}>SAT</div>
+            </div>
+          </div>
+          <div className="rv rv-d6 mt-16 text-center" style={{
+            fontSize: "clamp(20px, 2.2vw, 28px)", lineHeight: 1.4,
+            color: "rgba(243,244,246,.92)", maxWidth: 720, margin: "64px auto 0",
+          }}>
+            {SD.reachesAffected > 0 ? `${SD.reachesAffected} reach school${SD.reachesAffected > 1 ? "s" : ""} shift${SD.reachesAffected === 1 ? "s" : ""} to ` : "Borderline schools move to "}<span className="accent-text font-medium">target</span>.<br/>
+            Your admit range expands meaningfully across your list.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Scene 10 — Insight ───────────────────────────────────────────
+function SceneInsight({ active, studentName }) {
+  const text = SD.insight;
+  const out = useTypeOn(text, active, 18, 600);
+  return (
+    <div className={`scene ${active ? "active play" : ""}`}>
+      <div className="absolute inset-0 flex flex-col justify-center px-12 lg:px-24">
+        <div className="rv rv-d1 flex items-center gap-3 mb-8">
+          <span className="micro accent-text">✦ Key Insight</span>
+          <span style={{ width: 1, height: 12, background: "rgba(255,255,255,.15)" }} />
+          <span className="micro" style={{ color: "rgba(203,213,245,.5)" }}>LP Insights · From your 6 modules</span>
+        </div>
+        <div className="relative" style={{ maxWidth: 1100 }}>
+          <div className="quote-mark absolute" style={{ left: -20, top: 60 }}>"</div>
+          <div className="display rv-soft" style={{ fontSize: "clamp(26px, 3vw, 42px)", lineHeight: 1.32, fontWeight: 300, letterSpacing: "-0.02em", color: "rgba(243,244,246,.95)" }}>
+            {out}{out.length < text.length && active && <span className="caret" />}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Scene 11 — Exec Summary (final) ──────────────────────────────
+function SceneExec({ active, studentName, score, onReplay }) {
+  return (
+    <div className={`scene ${active ? "active play" : ""}`} style={{ overflow: "auto" }}>
+      <div className="absolute inset-0" style={{ overflow: "auto", padding: "80px 48px 140px" }}>
+        <div style={{ maxWidth: 1240, margin: "0 auto" }}>
+          {/* Header */}
+          <div className="rv rv-d1 flex items-center justify-between mb-8 flex-wrap gap-4">
+            <div>
+              <div className="micro mb-2" style={{ color: "rgba(203,213,245,.55)" }}>Final Wrap · Executive Summary</div>
+              <div className="display display-bold" style={{ fontSize: "clamp(32px, 3.4vw, 48px)", letterSpacing: "-0.03em" }}>
+                {studentName}'s Admissions Alpha
+              </div>
+              <div className="text-sm mt-2" style={{ color: "rgba(203,213,245,.65)" }}>
+                {SD.gpa ? `GPA ${SD.gpaStr}` : ""}{SD.gpa && SD.sat ? " · " : ""}{SD.sat ? `SAT ${SD.satStr}` : ""}{(SD.gpa || SD.sat) ? " · " : ""}Generated {SD.generatedDate}
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button className="pill" onClick={onReplay}>↻ Replay wrap</button>
+              <button className="pill pill-primary" onClick={() => {
+                const htmlContent = `<!DOCTYPE html><html><head><title>LaunchPath AI — Executive Summary</title>
+                <style>
+                  *{box-sizing:border-box;margin:0;padding:0;}
+                  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;color:#0f172a;padding:36px 44px;max-width:960px;margin:0 auto;font-size:13px;}
+                  .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:20px;border-bottom:2px solid #0f172a;margin-bottom:24px;}
+                  .header h1{font-size:26px;font-weight:800;letter-spacing:-.03em;margin-bottom:4px;}
+                  .header .sub{color:#64748b;font-size:12px;}
+                  .header .logo{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#0ea5e9;text-align:right;}
+                  .kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:22px;}
+                  .kpi{padding:12px 14px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;}
+                  .kpi .label{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#94a3b8;margin-bottom:6px;}
+                  .kpi .value{font-size:20px;font-weight:800;color:#0ea5e9;line-height:1;}
+                  .kpi .note{font-size:10px;color:#94a3b8;margin-top:4px;}
+                  .two-col{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:14px;}
+                  .two-col-half{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+                  .panel{border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px;}
+                  .panel-title{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#94a3b8;margin-bottom:12px;font-weight:700;}
+                  table{width:100%;border-collapse:collapse;}
+                  th{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#94a3b8;padding:6px 6px;text-align:left;border-bottom:1px solid #e2e8f0;}
+                  td{padding:8px 6px;border-bottom:1px solid #f1f5f9;font-size:12px;}
+                  .tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:9px;font-weight:700;}
+                  .tag-target{background:#dbeafe;color:#1d4ed8;}
+                  .tag-reach{background:#fce7f3;color:#9d174d;}
+                  .tag-safety{background:#dcfce7;color:#15803d;}
+                  .wi-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:12px;}
+                  .wi-delta{margin-left:auto;font-weight:700;color:#0ea5e9;font-size:11px;white-space:nowrap;}
+                  .prog-row{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:12px;}
+                  .prog-bar{flex:1;height:5px;background:#f1f5f9;border-radius:999px;overflow:hidden;}
+                  .prog-fill{height:100%;border-radius:999px;}
+                  .next-row{display:flex;gap:10px;padding:8px 10px;margin-bottom:6px;background:#f8fafc;border-radius:8px;font-size:12px;}
+                  .insight{padding:16px 18px;border-radius:10px;background:#f0f9ff;border:1px solid #bae6fd;margin-bottom:16px;}
+                  .insight-title{font-size:11px;font-weight:700;margin-bottom:8px;color:#0369a1;}
+                  .insight p{font-size:12px;line-height:1.7;color:#334155;}
+                  .footer{display:flex;justify-content:space-between;padding-top:14px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;}
+                  @media print{body{padding:20px 28px;}@page{margin:.5in;}}
+                </style></head><body>
+                <div class="header">
+                  <div>
+                    <h1>${SD.name}'s Admissions Alpha</h1>
+                    <div class="sub">${SD.gpa ? 'GPA ' + SD.gpaStr : ''}${SD.gpa && SD.sat ? ' · ' : ''}${SD.sat ? 'SAT ' + SD.satStr : ''} · Generated ${SD.generatedDate}</div>
+                  </div>
+                  <div class="logo">LaunchPath AI<br/>Executive Summary</div>
+                </div>
+                <div class="kpi-grid">
+                  <div class="kpi"><div class="label">Overall Fit Score</div><div class="value" style="color:#0ea5e9">${SD.overallScore}</div><div class="note">/100 · ${getTier(SD.overallScore).name} Tier</div></div>
+                  <div class="kpi"><div class="label">List Balance</div><div class="value" style="color:#0ea5e9">${SD.listBalance}</div><div class="note">${SD.safeties}S · ${SD.targets}T · ${SD.reaches}R</div></div>
+                  <div class="kpi"><div class="label">Colleges Saved</div><div class="value" style="color:#d97706">${SD.collegeCount}</div><div class="note">of 15 target</div></div>
+                  <div class="kpi"><div class="label">Essays Drafted</div><div class="value" style="color:#16a34a">${SD.essayCount}</div><div class="note">saved in Essay Studio</div></div>
+                  <div class="kpi"><div class="label">List Progress</div><div class="value" style="color:#7c3aed">${SD.progress[0].pct}%</div><div class="note">of college list built</div></div>
+                </div>
+                <div class="two-col">
+                  <div class="panel">
+                    <div class="panel-title">Top College Matches</div>
+                    <table>
+                      <thead><tr><th>College</th><th>Fit</th><th>Est. Admit</th><th>Type</th></tr></thead>
+                      <tbody>
+                        ${SD.matches.map(m => `<tr><td>${m.name}</td><td style="font-weight:700;color:#0ea5e9">${m.fit}</td><td>${m.admit}</td><td><span class="tag tag-${m.tag.toLowerCase()}">${m.tag}</span></td></tr>`).join("")}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="panel">
+                    <div class="panel-title">What-If Impact</div>
+                    ${SD.whatifs.slice(0,4).map(w => `<div class="wi-row"><span>${w.icon}</span><span>${w.action}</span><div class="wi-delta">${w.delta}</div></div>`).join("")}
+                  </div>
+                </div>
+                <div class="two-col-half">
+                  <div class="panel">
+                    <div class="panel-title">Application Progress</div>
+                    ${SD.progress.map(p => `<div class="prog-row"><div style="width:130px">${p.label}</div><div class="prog-bar"><div class="prog-fill" style="width:${p.pct}%;background:#0ea5e9"></div></div><div style="width:50px;text-align:right;color:#64748b">${p.cur}/${p.total}</div></div>`).join("")}
+                  </div>
+                  <div class="panel">
+                    <div class="panel-title">What to Focus on Next</div>
+                    ${SD.nextSteps.slice(0,3).map(r => `<div class="next-row"><span>${r.i}</span><div><div style="font-weight:600;margin-bottom:2px">${r.t}</div><div style="color:#64748b;font-size:11px">${r.s}</div></div></div>`).join("")}
+                  </div>
+                </div>
+                <div class="insight">
+                  <div class="insight-title">✦ Key Insight — LP Insights</div>
+                  <p>${SD.insight}</p>
+                </div>
+                <div class="footer">
+                  <span>Generated by LaunchPath AI · ${SD.generatedDate}</span>
+                  <span>launchpathai.com · Confidential</span>
+                </div>
+                
+
+</body></html>`;
+                const blob = new Blob([htmlContent], {type: 'text/html; charset=utf-8'});
+                const url = URL.createObjectURL(blob);
+                const w = window.open(url, '_blank');
+                if(w) {
+                  w.addEventListener('load', function() {
+                    setTimeout(function() { w.focus(); w.print(); }, 600);
+                  });
+                }
+              }}>⬇ Save as PDF</button>
+            </div>
+          </div>
+
+          {/* KPI strip */}
+          <div className="rv rv-d2 grid grid-cols-5 gap-3 mb-5" style={{ gridTemplateColumns: "repeat(5, minmax(0,1fr))" }}>
+            {[
+              { l: "Overall Fit Score",   v: `${SD.overallScore}`, s: `/100 · ${getTier(SD.overallScore).name} Tier`, c: "#6ee7b7" },
+              { l: "List Balance",        v: SD.listBalance,        s: `${SD.safeties}S · ${SD.targets}T · ${SD.reaches}R`, c: "var(--accent-1)" },
+              { l: "Colleges Saved",      v: `${SD.collegeCount}`,  s: "/ 15 target", c: "#fde68a" },
+              { l: "Essays Drafted",      v: `${SD.essayCount}`,    s: "saved in Essay Studio", c: "var(--accent-1)" },
+              { l: "List Progress",       v: `${SD.progress[0].pct}%`, s: "of college list built", c: "#a78bfa" },
+            ].map((k, i) => (
+              <div key={k.l} style={{
+                padding: "16px 18px", borderRadius: 14,
+                border: "1px solid rgba(255,255,255,.08)", background: "rgba(15,23,42,.5)",
+              }}>
+                <div className="micro mb-2" style={{ color: "rgba(203,213,245,.55)" }}>{k.l}</div>
+                <div className="display display-bold tabular-nums" style={{ fontSize: 28, lineHeight: 1, color: k.c }}>{k.v}</div>
+                <div className="text-xs mt-2" style={{ color: "rgba(203,213,245,.55)" }}>{k.s}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Two-col: matches + what-if */}
+          <div className="rv rv-d3 grid gap-4 mb-4" style={{ gridTemplateColumns: "1.4fr 1fr" }}>
+            <div style={{ padding: "20px 22px", borderRadius: 16, border: "1px solid rgba(255,255,255,.08)", background: "rgba(15,23,42,.5)" }}>
+              <div className="micro mb-4" style={{ color: "rgba(203,213,245,.55)" }}>Top College Matches</div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid rgba(255,255,255,.08)" }}>
+                    {["College","Fit","Admit %","5yr ROI","Type"].map(h => (
+                      <th key={h} className="micro" style={{ padding: "8px 6px", textAlign: "left", color: "rgba(203,213,245,.5)" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {MATCHES.map(m => {
+                    const tag = TAG_COLORS[m.tag];
+                    return (
+                      <tr key={m.name} style={{ borderBottom: "1px solid rgba(255,255,255,.04)" }}>
+                        <td style={{ padding: "10px 6px", fontWeight: 500 }}>{m.name}</td>
+                        <td style={{ padding: "10px 6px", color: "var(--accent-1)", fontWeight: 600 }}>{m.fit}</td>
+                        <td style={{ padding: "10px 6px" }}>{m.admit}</td>
+                        <td style={{ padding: "10px 6px", color: "#6ee7b7", fontWeight: 500 }}>{m.roi}</td>
+                        <td style={{ padding: "10px 6px" }}>
+                          <span style={{
+                            display: "inline-block", padding: "3px 10px", borderRadius: 999,
+                            fontSize: 10, fontWeight: 700,
+                            background: tag.bg, border: `1px solid ${tag.bd}`, color: tag.fg,
+                          }}>{m.tag}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ padding: "20px 22px", borderRadius: 16, border: "1px solid rgba(255,255,255,.08)", background: "rgba(15,23,42,.5)" }}>
+              <div className="micro mb-4" style={{ color: "rgba(203,213,245,.55)" }}>What-If Impact</div>
+              {WHATIFS.map((w, i) => (
+                <div key={w.action} style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "9px 0", borderBottom: i < WHATIFS.length - 1 ? "1px solid rgba(255,255,255,.04)" : "none",
+                  fontSize: 13,
+                }}>
+                  <span style={{ fontSize: 16 }}>{w.icon}</span>
+                  <span style={{ flex: 1, color: "rgba(243,244,246,.92)" }}>{w.action}</span>
+                  <span className="accent-text font-medium" style={{ fontSize: 12, whiteSpace: "nowrap" }}>{w.delta}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Two-col: progress + next steps */}
+          <div className="rv rv-d4 grid gap-4 mb-4" style={{ gridTemplateColumns: "1fr 1fr" }}>
+            <div style={{ padding: "20px 22px", borderRadius: 16, border: "1px solid rgba(255,255,255,.08)", background: "rgba(15,23,42,.5)" }}>
+              <div className="micro mb-4" style={{ color: "rgba(203,213,245,.55)" }}>Application Progress</div>
+              {PROGRESS.map((p, i) => (
+                <div key={p.label} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0", fontSize: 13 }}>
+                  <div style={{ width: 150, color: "rgba(243,244,246,.9)" }}>{p.label}</div>
+                  <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,.06)", borderRadius: 999, overflow: "hidden" }}>
+                    <div style={{ width: `${p.pct}%`, height: "100%", background: PROGRESS_TONE[p.tone] }} />
+                  </div>
+                  <div className="tabular-nums" style={{ width: 50, textAlign: "right", color: "rgba(203,213,245,.7)", fontSize: 12 }}>{p.cur}/{p.total}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ padding: "20px 22px", borderRadius: 16, border: "1px solid rgba(255,255,255,.08)", background: "rgba(15,23,42,.5)" }}>
+              <div className="micro mb-4" style={{ color: "rgba(203,213,245,.55)" }}>What to Focus on Next</div>
+              {SD.nextSteps.slice(0,3).map(r => (
+                <div key={r.t} style={{
+                  display: "flex", gap: 12, padding: "10px 12px", marginBottom: 8,
+                  background: "rgba(15,23,42,.4)", borderRadius: 10, fontSize: 13,
+                }}>
+                  <span style={{ fontSize: 16 }}>{r.i}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, marginBottom: 2 }}>{r.t}</div>
+                    <div style={{ color: "rgba(203,213,245,.6)", fontSize: 12, lineHeight: 1.5 }}>{r.s}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Insight card */}
+          <div className="rv rv-d5" style={{
+            padding: "22px 26px", borderRadius: 18,
+            background: "linear-gradient(135deg, rgba(34,211,238,.08), rgba(59,130,246,.06))",
+            border: "1px solid rgba(34,211,238,.25)",
+          }}>
+            <div className="flex items-center gap-3 mb-3">
+              <span style={{ fontSize: 18 }}>✦</span>
+              <span className="font-semibold">Key Insight — Your College Readiness</span>
+              <span style={{ marginLeft: "auto", fontSize: 11, padding: "3px 10px", borderRadius: 999, background: "rgba(34,211,238,.15)", border: "1px solid rgba(34,211,238,.3)", color: "var(--accent-1)" }}>LP Insights</span>
+            </div>
+            <div style={{ fontSize: 14, lineHeight: 1.7, color: "rgba(226,232,240,.9)" }}>
+              {SD.insight}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="rv rv-d6 mt-8 flex items-center justify-between flex-wrap gap-3" style={{ paddingTop: 16, borderTop: "1px solid rgba(255,255,255,.06)" }}>
+            <div className="micro" style={{ color: "rgba(203,213,245,.4)" }}>
+              Generated by LaunchPath AI · {SD.generatedDate}
+            </div>
+            <div className="flex gap-2">
+              <button className="pill" onClick={onReplay}>↻ Replay summary</button>
+              <button className="pill pill-primary" onClick={() => window.location.href = "student-workplace.html"}>Return to workspace →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Master controller ───────────────────────────────────────────
+function PresentationMode() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const accent = ACCENTS[t.accent] || ACCENTS.cyan;
+  useEffect(() => {
+    document.documentElement.style.setProperty("--accent-1", accent.a1);
+    document.documentElement.style.setProperty("--accent-2", accent.a2);
+  }, [accent]);
+
+  const scenes = useMemo(() => buildScenes(), []);
+  const speed = t.speed || 1;
+
+  const [sceneIdx, setSceneIdx] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const [playing, setPlaying] = useState(t.autoPlay);
+  const lastTickRef = useRef(performance.now());
+  const rafRef = useRef(0);
+
+  useEffect(() => { setPlaying(t.autoPlay); }, [t.autoPlay]);
+
+  useEffect(() => {
+    if (!playing) return;
+    lastTickRef.current = performance.now();
+    const tick = (now) => {
+      const dt = (now - lastTickRef.current) * speed;
+      lastTickRef.current = now;
+      setElapsed((prev) => {
+        const cur = scenes[sceneIdx];
+        const next = prev + dt;
+        if (next >= cur.dur && sceneIdx < scenes.length - 1) {
+          setSceneIdx((s) => Math.min(scenes.length - 1, s + 1));
+          return 0;
+        }
+        return Math.min(next, cur.dur);
+      });
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [playing, sceneIdx, scenes, speed]);
+
+  const totalDur = scenes.slice(0, -1).reduce((a, s) => a + s.dur, 0);
+  const progressMs = scenes.slice(0, sceneIdx).reduce((a, s) => a + s.dur, 0) + Math.min(elapsed, scenes[sceneIdx]?.dur ?? 0);
+  const progressPct = sceneIdx >= scenes.length - 1 ? 100 : (progressMs / totalDur) * 100;
+
+  const goTo = useCallback((i) => {
+    setSceneIdx(Math.max(0, Math.min(scenes.length - 1, i)));
+    setElapsed(0);
+  }, [scenes.length]);
+  const next = useCallback(() => goTo(sceneIdx + 1), [goTo, sceneIdx]);
+  const prev = useCallback(() => goTo(sceneIdx - 1), [goTo, sceneIdx]);
+  const replay = useCallback(() => { setSceneIdx(0); setElapsed(0); setPlaying(true); }, []);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); next(); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); prev(); }
+      else if (e.key === "Escape") setPlaying(false);
+      else if (e.key === "r" || e.key === "R") replay();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [next, prev, replay]);
+
+  const isFinal = sceneIdx === scenes.length - 1;
+  const studentName = t.studentName || "Ava";
+  const totalSec = Math.round(totalDur / 1000);
+
+  return (
+    <div className="relative w-full h-full overflow-hidden">
+      <Background variant={t.variant} />
+
+      <div className="topbar">
+        <div className="flex items-center gap-3">
+          <a href="index.html" className="pill" style={{ textDecoration:"none", color:"rgba(234,242,255,.92)" }}>← Home</a>
+          <div className="flex items-center gap-3 pill" style={{ background: "rgba(15,23,42,.4)" }}>
+            <BrandMark size={18} />
+            <span style={{ fontSize:"13px", color:"#ffffff", fontWeight:700, letterSpacing:".10em", textTransform:"uppercase" }}>Executive Summary</span>
+            <span style={{ width: 1, height: 10, background: "rgba(255,255,255,.15)" }} />
+            <span className="micro tabular-nums" style={{ color: "rgba(203,213,245,.55)" }}>
+              {String(sceneIdx + 1).padStart(2,"0")} / {String(scenes.length).padStart(2,"0")}
+            </span>
+          </div>
+        </div>
+        <button className="pill" onClick={() => goTo(scenes.length - 1)}>Skip to summary →</button>
+      </div>
+
+      <div className="absolute inset-0">
+        <ScenePreflight  active={sceneIdx === 0} />
+        <SceneHero       active={sceneIdx === 1} score={t.score} studentName={studentName} />
+        <SceneTier       active={sceneIdx === 2} score={t.score} />
+        <SceneLegend     active={sceneIdx === 3} />
+        <ScenePillars    active={sceneIdx === 4} />
+        <ScenePercentile active={sceneIdx === 5} studentName={studentName} />
+        <SceneMatches    active={sceneIdx === 6} />
+        <SceneProgress   active={sceneIdx === 7} />
+        <SceneWhatIf     active={sceneIdx === 8} />
+        <SceneLever      active={sceneIdx === 9} />
+        <SceneInsight    active={sceneIdx === 10} studentName={studentName} />
+        <SceneExec       active={sceneIdx === 11} studentName={studentName} score={t.score} onReplay={replay} />
+      </div>
+
+      <div className={`chrome ${isFinal ? "hidden" : ""}`}>
+        <button className="pill" style={{ width: 40, padding: 0, height: 36, display: "grid", placeItems: "center" }} onClick={() => setPlaying(p => !p)} aria-label={playing ? "Pause" : "Play"}>
+          {playing ? (
+            <svg width="10" height="12" viewBox="0 0 10 12"><rect x="0" y="0" width="3" height="12" fill="currentColor"/><rect x="7" y="0" width="3" height="12" fill="currentColor"/></svg>
+          ) : (
+            <svg width="10" height="12" viewBox="0 0 10 12"><path d="M0 0L10 6L0 12V0Z" fill="currentColor"/></svg>
+          )}
+        </button>
+        <button className="pill" style={{ padding: "0 10px", height: 36 }} onClick={prev}>←</button>
+        <div className="scrub" onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          const pct = (e.clientX - r.left) / r.width;
+          const target = pct * totalDur;
+          let acc = 0, i = 0;
+          for (; i < scenes.length - 1; i++) {
+            if (acc + scenes[i].dur > target) break;
+            acc += scenes[i].dur;
+          }
+          setSceneIdx(i); setElapsed(target - acc);
+        }}>
+          <div className="scrub-fill" style={{ width: `${progressPct}%` }} />
+          {scenes.slice(1, -1).map((s, i) => {
+            const accSum = scenes.slice(0, i + 1).reduce((a, x) => a + x.dur, 0);
+            return <div key={i} className="scrub-marker" style={{ left: `${(accSum / totalDur) * 100}%` }} />;
+          })}
+        </div>
+        <button className="pill" style={{ padding: "0 10px", height: 36 }} onClick={next}>→</button>
+        <span className="micro tabular-nums ml-2" style={{ color: "rgba(203,213,245,.55)", minWidth: 76, textAlign: "right" }}>
+          {Math.floor(progressMs / 1000).toString().padStart(2, "0")}s / {totalSec}s · {scenes[sceneIdx]?.label}
+        </span>
+      </div>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Variant" />
+        <TweakRadio label="Background" value={t.variant} options={["aurora", "starfield", "grid"]} onChange={(v) => setTweak("variant", v)} />
+        <TweakRadio label="Accent" value={t.accent} options={["cyan", "violet", "amber"]} onChange={(v) => setTweak("accent", v)} />
+
+        <TweakSection label="Content" />
+        <TweakSlider label="Score" value={t.score} min={0} max={100} step={1} onChange={(v) => setTweak("score", v)} />
+        <TweakText label="Student" value={t.studentName} onChange={(v) => setTweak("studentName", v)} />
+
+        <TweakSection label="Playback" />
+        <TweakToggle label="Auto-play" value={t.autoPlay} onChange={(v) => setTweak("autoPlay", v)} />
+        <TweakSlider label="Speed" value={t.speed} min={0.5} max={2} step={0.25} unit="×" onChange={(v) => setTweak("speed", v)} />
+        <TweakButton label="Replay from start" onClick={replay} />
+        <TweakButton label="Jump to summary" onClick={() => goTo(scenes.length - 1)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+try {
+  ReactDOM.createRoot(document.getElementById("root")).render(
+    <ErrorBoundary>
+      <PresentationMode />
+    </ErrorBoundary>
+  );
+} catch(e) {
+  document.getElementById("root").innerHTML =
+    '<div style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#020617;color:white;padding:40px;text-align:center;">'
+    + '<div style="font-size:32px;margin-bottom:16px">⚠️</div>'
+    + '<div style="font-size:20px;font-weight:700;margin-bottom:12px">Could not load your summary</div>'
+    + '<div style="font-size:13px;color:rgba(203,213,245,.6);max-width:480px;margin-bottom:32px">' + e.message + '</div>'
+    + '<a href="student-workplace.html" style="padding:10px 24px;border-radius:999px;background:rgba(34,211,238,.15);border:1px solid rgba(34,211,238,.4);color:#22d3ee;text-decoration:none;font-size:14px">← Back to workspace</a>'
+    + '</div>';
+}
+</script>
+
+</body></html>
