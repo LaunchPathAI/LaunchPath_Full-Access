@@ -9614,7 +9614,7 @@ ${text.substring(0, 3000)}`;
         }
       }
 
-      window.lpDoSaveEssay = function () {
+      window.lpDoSaveEssay = async function () {
         var text = window.__lpEssayTextToSave || "";
         if (!text) { return; }
         var school = (document.getElementById("lpSaveSchoolInput").value.trim()) || "Common App";
@@ -9622,6 +9622,23 @@ ${text.substring(0, 3000)}`;
         var score = window.__lpBeforeScore || 0;
         var now = new Date();
         var savedOn = now.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+        
+        var modalBtn = document.querySelector("#lpEssaySaveModal .lp-modal-btn.primary");
+        var originalBtnText = modalBtn ? modalBtn.textContent : "Save Essay";
+        if(modalBtn) modalBtn.textContent = "Saving...";
+
+        try {
+          const _supabase = supabase.createClient(LP_CONFIG.SUPABASE_URL, LP_CONFIG.SUPABASE_ANON_KEY);
+          const { data: { session } } = await _supabase.auth.getSession();
+          if(session) {
+            await _supabase.from('saved_essays').insert([{ user_id: session.user.id, school: school, essay_type: essayType }]);
+          } else {
+            console.warn("User not logged in, essay not saved to Supabase.");
+          }
+        } catch(e) {
+          console.error("Supabase save failed", e);
+        }
+
         var item = {
           id: "essay_" + Date.now(),
           type: "essay",
@@ -9638,6 +9655,8 @@ ${text.substring(0, 3000)}`;
         setLastTool("essay-studio");
         document.getElementById("lpEssaySaveModal").style.display = "none";
         window.__lpEssayTextToSave = null;
+        if(modalBtn) modalBtn.textContent = originalBtnText;
+
         if (typeof lpToast === "function") lpToast("Essay saved to My List ✓", "ok", 3000);
         else {
           var s = document.getElementById("btnSave");

@@ -1423,19 +1423,32 @@
         async function updateWorkspace() {
           var prof = getProfile();
           var lastTool = getLastTool();
-          var items = getSaved().filter(x => x.type !== "college");
+          var items = getSaved().filter(x => x.type !== "college" && x.type !== "essay");
           try {
             const _supabase = supabase.createClient(LP_CONFIG.SUPABASE_URL, LP_CONFIG.SUPABASE_ANON_KEY);
             const { data: { session } } = await _supabase.auth.getSession();
             if(session) {
-              const { data } = await _supabase.from('saved_colleges').select('*');
-              if(data) {
-                data.forEach(c => {
+              const [collegesRes, essaysRes] = await Promise.all([
+                _supabase.from('saved_colleges').select('*'),
+                _supabase.from('saved_essays').select('*')
+              ]);
+              if(collegesRes.data) {
+                collegesRes.data.forEach(c => {
                   items.push({
                     type: "college",
                     name: c.college_name,
                     deadline: c.deadline,
                     savedOn: new Date(c.created_at).toLocaleDateString("en-US", {month:"short", day:"numeric", year:"numeric"})
+                  });
+                });
+              }
+              if(essaysRes.data) {
+                essaysRes.data.forEach(e => {
+                  items.push({
+                    type: "essay",
+                    college: e.school,
+                    subject: e.essay_type,
+                    savedOn: new Date(e.created_at).toLocaleDateString("en-US", {month:"short", day:"numeric", year:"numeric"})
                   });
                 });
               }
@@ -1575,6 +1588,7 @@
         } else {
           updateWorkspace();
         }
+        window.updateWorkspace = updateWorkspace;
         window.addEventListener("storage", updateWorkspace);
         document.addEventListener("lp:saved-updated", updateWorkspace);
       })();
@@ -1626,13 +1640,7 @@
           rows = items.map(i => [i.name || "—", i.deadline || "—", (i.savedOn || i.savedDate || "—")]);
         } else if (type === "essay") {
           headers = ["#", "School", "Essay Type", "Saved Date"];
-          const demo = [
-            { college: "Common App", subject: "Personal Statement", savedOn: "Jan 4, 2026" },
-            { college: "Northeastern University", subject: "Why This School", savedOn: "Jan 4, 2026" },
-            { college: "Boston University", subject: "Community & Impact", savedOn: "Jan 4, 2026" },
-          ];
-          const list = (items.length ? items : demo);
-          rows = list.map(i => [i.college || i.name || "—", i.subject || "—", (i.savedOn || i.savedDate || "—")]);
+          rows = items.map(i => [i.college || i.name || "—", i.subject || "—", (i.savedOn || i.savedDate || "—")]);
         } else if (type === "social") {
           headers = ["#", "Platform", "Post Type", "Saved"];
           rows = items.map(i => [i.platform || "—", i.postType || "—", i.savedOn || "—"]);
@@ -1644,8 +1652,23 @@
 
         // Clear
         const clearBtn = document.getElementById("lpClearType");
-        if (clearBtn) clearBtn.onclick = () => {
+        if (clearBtn) clearBtn.onclick = async () => {
+          clearBtn.textContent = "Clearing...";
+          if (type === "college" || type === "essay") {
+            try {
+              const _supabase = supabase.createClient(LP_CONFIG.SUPABASE_URL, LP_CONFIG.SUPABASE_ANON_KEY);
+              const { data: { session } } = await _supabase.auth.getSession();
+              if (session) {
+                const table = type === "college" ? 'saved_colleges' : 'saved_essays';
+                await _supabase.from(table).delete().eq('user_id', session.user.id);
+              }
+            } catch (e) {
+              console.error("Failed to clear Supabase data", e);
+            }
+          }
           setSaved(getSaved().filter(x => x.type !== type));
+          await window.updateWorkspace();
+          clearBtn.textContent = "Clear";
           openSaved(type);
         };
 
