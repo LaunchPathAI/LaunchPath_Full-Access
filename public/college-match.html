@@ -4,6 +4,8 @@
 <head>
 <meta charset="UTF-8" />
 <title>LaunchPath AI — College Match</title>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.50.0/dist/umd/supabase.js"></script>
 <style>
   :root {
     --bg-body: #16202f;
@@ -1565,7 +1567,12 @@ function cardHtml(item){
   const isPublic = (c.type || '').toLowerCase().includes('public');
   const tuition = isPublic ? `<div class="college-stat-line"><strong>Tuition:</strong> ${money(c.tuitionInState)} in-state / ${money(c.tuitionOutState)} out-of-state</div>` : `<div class="college-stat-line"><strong>Tuition:</strong> ${money(c.tuitionOutState || c.tuitionInState)} / year</div>`;
   const subLabel = ({strong_safety:'Strong Safety', safety:'Safety', high_target:'High Target', target:'Target', reach:'Reach', far_reach:'Far Reach / Lottery'})[item.sub] || tier;
-  return `\n    <article class="college-card" data-current-tier="${tier}" data-sub-tier="${item.sub}" data-college-name="${cleanName(c).replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" data-fit="${item.fit}" data-rank-band="${(c.rankingBand || 'ranking band pending').replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" data-gpa-band="${Number(c.gpaMin).toFixed(2)}–${Number(c.gpaMax).toFixed(2)} GPA" data-sat-band="${hasSatBand(c) ? `${c.satMin}–${c.satMax} SAT${c.actMin && c.actMax ? ` (${c.actMin}–${c.actMax} ACT)` : ''}` : 'SAT not reported'}" data-acceptance="${pct(lpAccRate(c))}${c.accRateEstimated ? ' (LP est.)' : ''}" data-tuition="${isPublic ? `${money(c.tuitionInState)} in-state / ${money(c.tuitionOutState)} out-of-state` : `${money(c.tuitionOutState || c.tuitionInState)} / year`}" data-quality-tier="${Number(c.qualityTier).toFixed(1)}" data-school-state="${(c.state || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" data-school-type="${(c.type || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" data-deadline="${(c.deadline || 'Deadline varies').replace(/&/g, '&amp;').replace(/"/g, '&quot;')}">\n      <div class="college-header-row">\n        <h3 class="college-name">${cleanName(c)}</h3>\n        <div class="fit-score-row"><span class="fit-score-pill"><span class="fit-score-pill-dot"></span>Profile match: ${item.fit}%</span></div>\n        <span class="college-tag ${tier}">${tier.charAt(0).toUpperCase()+tier.slice(1)}</span>\n      </div>\n      <div class="college-ranking">${subLabel} · LP tier ${Number(c.qualityTier).toFixed(1)} · ${c.rankingBand || 'ranking band pending'}</div>\n      <div class="college-meta-top">${c.type || ''} · ${c.city || ''}, ${c.state || ''} · ${regionLabel(c.region)}</div>\n      <div class="college-stat-line"><strong>Admit band (est.):</strong> ${Number(c.gpaMin).toFixed(2)}–${Number(c.gpaMax).toFixed(2)} GPA</div>\n      <div class="college-stat-line"><strong>Middle 50%:</strong> ${hasSatBand(c) ? `${c.satMin}–${c.satMax} SAT${c.satEstimated ? ' (LP est.)' : ''}` : 'SAT not reported'}${c.actMin && c.actMax ? ` (${c.actMin}–${c.actMax} ACT)` : ''}</div>\n      <div class="college-stat-line"><strong>Acceptance rate:</strong> ${pct(lpAccRate(c))}${c.accRateEstimated ? ' (LP est.)' : ''}</div>\n      ${tuition}\n      <div class="college-stat-line"><strong>Average net price:</strong> ${money(c.avgNetPrice)} / year</div>\n      <div class="college-stat-line"><strong>Cost of attendance:</strong> ${money(c.costOfAttendance)} / year</div>\n      <div class="college-stat-line"><strong>Data source:</strong> College Scorecard · GPA estimated · LP rank/tier/risk derived</div>\n      <div class="card-actions"><button class="btn-save" type="button" data-action="save" onclick="lpSaveFromCard(this.closest('.college-card'))">Save to list</button><button class="btn-ghost" type="button" data-action="why" onclick="lpOpenCardWhy(this.closest('.college-card'))">Why this match?</button><button class="btn-ghost" type="button" data-action="odds" onclick="lpOpenCardOdds(this.closest('.college-card'))">Improve my odds</button><a href="#" class="cta-link" data-action="details" onclick="event.preventDefault();lpOpenCardWhy(this.closest('.college-card'))">View details</a></div>\n    </article>`;
+  const cname = cleanName(c);
+  const isSaved = window.lpSavedColleges && window.lpSavedColleges.has(cname);
+  const saveBtnAttr = isSaved ? `class="btn-save saved" disabled style="background-color:rgba(34, 197, 94, 0.2);color:#86efac;border-color:rgba(34, 197, 94, 0.4);"` : `class="btn-save"`;
+  const saveBtnText = isSaved ? `Saved ✓` : `Save to list`;
+
+  return `\n    <article class="college-card" data-current-tier="${tier}" data-sub-tier="${item.sub}" data-college-name="${cname.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" data-fit="${item.fit}" data-rank-band="${(c.rankingBand || 'ranking band pending').replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" data-gpa-band="${Number(c.gpaMin).toFixed(2)}–${Number(c.gpaMax).toFixed(2)} GPA" data-sat-band="${hasSatBand(c) ? `${c.satMin}–${c.satMax} SAT${c.actMin && c.actMax ? ` (${c.actMin}–${c.actMax} ACT)` : ''}` : 'SAT not reported'}" data-acceptance="${pct(lpAccRate(c))}${c.accRateEstimated ? ' (LP est.)' : ''}" data-tuition="${isPublic ? `${money(c.tuitionInState)} in-state / ${money(c.tuitionOutState)} out-of-state` : `${money(c.tuitionOutState || c.tuitionInState)} / year`}" data-quality-tier="${Number(c.qualityTier).toFixed(1)}" data-school-state="${(c.state || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" data-school-type="${(c.type || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" data-deadline="${(c.deadline || 'Deadline varies').replace(/&/g, '&amp;').replace(/"/g, '&quot;')}">\n      <div class="college-header-row">\n        <h3 class="college-name">${cname}</h3>\n        <div class="fit-score-row"><span class="fit-score-pill"><span class="fit-score-pill-dot"></span>Profile match: ${item.fit}%</span></div>\n        <span class="college-tag ${tier}">${tier.charAt(0).toUpperCase()+tier.slice(1)}</span>\n      </div>\n      <div class="college-ranking">${subLabel} · LP tier ${Number(c.qualityTier).toFixed(1)} · ${c.rankingBand || 'ranking band pending'}</div>\n      <div class="college-meta-top">${c.type || ''} · ${c.city || ''}, ${c.state || ''} · ${regionLabel(c.region)}</div>\n      <div class="college-stat-line"><strong>Admit band (est.):</strong> ${Number(c.gpaMin).toFixed(2)}–${Number(c.gpaMax).toFixed(2)} GPA</div>\n      <div class="college-stat-line"><strong>Middle 50%:</strong> ${hasSatBand(c) ? `${c.satMin}–${c.satMax} SAT${c.satEstimated ? ' (LP est.)' : ''}` : 'SAT not reported'}${c.actMin && c.actMax ? ` (${c.actMin}–${c.actMax} ACT)` : ''}</div>\n      <div class="college-stat-line"><strong>Acceptance rate:</strong> ${pct(lpAccRate(c))}${c.accRateEstimated ? ' (LP est.)' : ''}</div>\n      ${tuition}\n      <div class="college-stat-line"><strong>Average net price:</strong> ${money(c.avgNetPrice)} / year</div>\n      <div class="college-stat-line"><strong>Cost of attendance:</strong> ${money(c.costOfAttendance)} / year</div>\n      <div class="college-stat-line"><strong>Data source:</strong> College Scorecard · GPA estimated · LP rank/tier/risk derived</div>\n      <div class="card-actions"><button ${saveBtnAttr} type="button" data-action="save">${saveBtnText}</button><button class="btn-ghost" type="button" data-action="why">Why this match?</button><button class="btn-ghost" type="button" data-action="odds">Improve my odds</button><a href="#" class="cta-link" data-action="details">View details</a></div>\n    </article>`;
 }
 function updateSummary(counts){
   const map = {safety:'Safety', target:'Target', reach:'Reach'};
@@ -2029,12 +2036,59 @@ function lpOpenCardOdds(card){
     </div>`;
   lpOpenInfoModal('LaunchPath Strategy', name, 'Personalized strategy based on your profile — calculated and advisory.', body);
 }
-function lpSaveFromCard(card){
-  const name = card?.dataset?.collegeName || 'school';
-  lpOpenInfoModal('Saved to list', `${name}`, `<div class="lp-modal-row"><div class="lp-modal-row-title">${name}</div><div class="lp-modal-row-meta">This demo confirms the Save action. In production, this should write to the student’s saved college list.</div></div>`);
+async function lpSaveFromCard(card, btn){
+  const name = card?.dataset?.collegeName;
+  const deadline = card?.dataset?.deadline || 'Varies';
+  if(!name) return;
+
+  if(btn) {
+    btn.textContent = 'Saving...';
+    btn.disabled = true;
+  }
+
+  const _supabase = supabase.createClient(LP_CONFIG.SUPABASE_URL, LP_CONFIG.SUPABASE_ANON_KEY);
+  const { data: { session } } = await _supabase.auth.getSession();
+  if(!session) {
+    alert("Please log in to save colleges.");
+    if(btn) { btn.textContent = 'Save to list'; btn.disabled = false; }
+    return;
+  }
+
+  const { error } = await _supabase.from('saved_colleges').insert({
+    user_id: session.user.id,
+    college_name: name,
+    deadline: deadline
+  });
+
+  if (error) {
+    console.error(error);
+    alert("Failed to save: " + error.message);
+    if(btn) { btn.textContent = 'Save to list'; btn.disabled = false; }
+  } else {
+    if(btn) { 
+      btn.textContent = 'Saved ✓'; 
+      btn.style.backgroundColor = 'rgba(34, 197, 94, 0.2)';
+      btn.style.color = '#86efac';
+      btn.style.borderColor = 'rgba(34, 197, 94, 0.4)';
+    }
+    window.lpSavedColleges = window.lpSavedColleges || new Set();
+    window.lpSavedColleges.add(name);
+  }
+}
+
+window.lpSavedColleges = new Set();
+async function initSavedColleges() {
+  const _supabase = supabase.createClient(LP_CONFIG.SUPABASE_URL, LP_CONFIG.SUPABASE_ANON_KEY);
+  const { data: { session } } = await _supabase.auth.getSession();
+  if(!session) return;
+  const { data, error } = await _supabase.from('saved_colleges').select('college_name');
+  if(data) {
+    data.forEach(row => window.lpSavedColleges.add(row.college_name));
+  }
 }
 
 document.addEventListener('DOMContentLoaded', function(){
+  initSavedColleges();
   const geo = document.querySelector('.filters-panel select');
   if (geo && !geo.id) geo.id = 'lp-geo-select';
   const actInput = document.getElementById('lp-profile-act');
@@ -2074,7 +2128,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const action = actionEl.dataset.action;
     if (action === 'why' || action === 'details') lpOpenCardWhy(card);
     if (action === 'odds') lpOpenCardOdds(card);
-    if (action === 'save') lpSaveFromCard(card);
+    if (action === 'save') lpSaveFromCard(card, actionEl);
   });
 
   updateSummary({safety:0,target:0,reach:0});

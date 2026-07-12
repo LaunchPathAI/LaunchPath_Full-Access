@@ -1354,7 +1354,7 @@
 
 
       function updateRings() {
-        const items = getSaved();
+        const items = window.lpSavedCollegesData || getSaved();
         const essays = items.filter(x => x.type === "essay").length;
         const colleges = items.filter(x => x.type === "college").length;
         const social = items.filter(x => x.type === "social").length;
@@ -1399,6 +1399,7 @@
       // Also re-run whenever localStorage changes (e.g. from essay-studio in same tab)
       window.addEventListener("storage", updateRings);
       document.addEventListener("lp:saved-updated", updateRings);
+      window.addEventListener("lp:colleges-loaded", updateRings);
 
       // ── SMART WORKSPACE: greeting + continue button + dial sublabels ──────────────
       (function () {
@@ -1419,10 +1420,29 @@
           return days === 1 ? "yesterday" : days + "d ago";
         }
 
-        function updateWorkspace() {
+        async function updateWorkspace() {
           var prof = getProfile();
           var lastTool = getLastTool();
-          var items = getSaved();
+          var items = getSaved().filter(x => x.type !== "college");
+          try {
+            const _supabase = supabase.createClient(LP_CONFIG.SUPABASE_URL, LP_CONFIG.SUPABASE_ANON_KEY);
+            const { data: { session } } = await _supabase.auth.getSession();
+            if(session) {
+              const { data } = await _supabase.from('saved_colleges').select('*');
+              if(data) {
+                data.forEach(c => {
+                  items.push({
+                    type: "college",
+                    name: c.college_name,
+                    deadline: c.deadline,
+                    savedOn: new Date(c.created_at).toLocaleDateString("en-US", {month:"short", day:"numeric", year:"numeric"})
+                  });
+                });
+              }
+            }
+          } catch(e) { console.error("Supabase fetch failed", e); }
+          window.lpSavedCollegesData = items;
+          window.dispatchEvent(new CustomEvent("lp:colleges-loaded"));
 
           // ── Smart greeting ──
           var greetEl = document.getElementById("wsGreeting");
@@ -1595,22 +1615,15 @@
         const modal = document.getElementById("lpModal");
         if (!modal) return;
 
-        const items = getSaved().filter(x => x.type === type);
+        const allItems = window.lpSavedCollegesData || getSaved();
+        const items = allItems.filter(x => x.type === type);
         const titleMap = { college: "Saved Colleges", essay: "Saved Essays", social: "Saved Social Posts" };
         document.getElementById("lpModalTitle").textContent = titleMap[type] || "Saved";
 
         let headers = ["#"], rows = [];
         if (type === "college") {
           headers = ["#", "College Name", "Deadline", "Saved Date"];
-          const demo = [
-            { name: "Northeastern University", deadline: "Jan 1, 2026", savedOn: "Jan 4, 2026" },
-            { name: "Boston University", deadline: "Jan 4, 2026", savedOn: "Jan 4, 2026" },
-            { name: "University of Michigan", deadline: "Feb 1, 2026", savedOn: "Jan 4, 2026" },
-            { name: "Rutgers University", deadline: "Dec 1, 2025", savedOn: "Jan 4, 2026" },
-            { name: "NYU", deadline: "Jan 5, 2026", savedOn: "Jan 4, 2026" },
-          ];
-          const list = (items.length ? items : demo);
-          rows = list.map(i => [i.name || "—", i.deadline || "—", (i.savedOn || i.savedDate || "—")]);
+          rows = items.map(i => [i.name || "—", i.deadline || "—", (i.savedOn || i.savedDate || "—")]);
         } else if (type === "essay") {
           headers = ["#", "School", "Essay Type", "Saved Date"];
           const demo = [
@@ -1759,7 +1772,8 @@
       }
 
       function loadDeadlines() {
-        const saved = getSaved().filter(x => (x?.type || "") === "college");
+        const allItems = window.lpSavedCollegesData || getSaved();
+        const saved = allItems.filter(x => (x?.type || "") === "college");
         const mapped = saved
           .map(x => ({
             college: x.name || x.college || "College",
@@ -2047,6 +2061,18 @@
       if (prev) prev.addEventListener("click", () => { current = new Date(current.getFullYear(), current.getMonth() - 1, 1); rerender(); });
       if (next) next.addEventListener("click", () => { current = new Date(current.getFullYear(), current.getMonth() + 1, 1); rerender(); });
       if (view) view.addEventListener("change", rerender);
+
+      window.addEventListener("lp:colleges-loaded", () => {
+        deadlines = loadDeadlines();
+        renderUpcoming();
+        renderMiniCalPreview(new Date());
+        rerender();
+      });
+
+      document.addEventListener("DOMContentLoaded", () => {
+        renderUpcoming();
+        renderMiniCalPreview(new Date());
+      });
 
       // Update deadlines if storage changes
       window.addEventListener("storage", (e) => {
